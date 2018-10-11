@@ -1,9 +1,11 @@
 import re
 WHITESPACE = re.compile("[ \r\t\n]*")
-ITEM = re.compile("([^ \r\t\n]+)[ \r\t\n]*[([]")
+ITEM = re.compile("([^ \r\t\n([]*)[ \r\t\n]*[([]")  #allow no name items
+#ITEM = re.compile("([^ \r\t\n([]+)[ \r\t\n]*[([]")
 STRING = re.compile('"([^"]*)"')
-CHAR = re.compile("'([^;])'")
+CHAR = re.compile("'(.)'")
 NUMBER = re.compile('(-?[\d.]+)(mil|mm)?')
+ITEMSSTART = re.compile('[ \r\t\n]+\(')
 
 class Item:
     def __init__(self, name, attributes = [], children = []):
@@ -53,7 +55,7 @@ def parseAttributes(s, idx):    #TODO almost same as parse items
         res.append(attr)
 
 def parseItem(s, idx):
-    if s[idx] == ')' or idx == len(s):
+    if idx == len(s) or s[idx] == ')' :
         return None, idx + 1
     if s[idx] == '#':
         return parseComment(s,idx)
@@ -61,8 +63,13 @@ def parseItem(s, idx):
     if not r:
         raise Exception("Syntax error near idx %s, %s" % (idx, s[idx:idx+30]))
     name = r.group(1)
-    attr, idx = parseAttributes(s, r.end())
-    return Item(name, attr), idx
+    idx = r.end()
+    attr, idx = parseAttributes(s, idx)
+    items = None
+    r = ITEMSSTART.match(s, idx)
+    if r:
+        items, idx = parseItems(s, r.end())
+    return Item(name, attr, items), idx
 
 def parseItems(s, idx):
     res = []
