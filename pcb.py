@@ -4,10 +4,12 @@ class Style:
     def __init__(self, string):
         fields = string.split(',')
         self.name = fields[0]
-        self.thick = fields[1]  #TODO parse number
-        self.diameter= fields[2]
-        self.drill = fields[3]
-        self.spacing = fields[4]
+        self.thick = parsepcb.parseValue(fields[1], 0)[0].distance()
+        self.diameter= parsepcb.parseValue(fields[2], 0)[0].distance()
+        self.drill = parsepcb.parseValue(fields[3], 0)[0].distance()
+        self.spacing = parsepcb.parseValue(fields[4], 0)[0].distance()
+    def __str__(self):
+        return self.name + ',' + str(parsepcb.nm(self.thick)) + ',' + str(parsepcb.nm(self.diameter)) + ',' + str(parsepcb.nm(self.drill)) + ',' + str(parsepcb.nm(self.spacing))
 
 class SymbolLine:
     def __init__(self, item):
@@ -55,7 +57,7 @@ class Pad:
 class Symbol:
     def __init__(self, item):
         self.char = item.attributes[0]
-        self.delta = item.attributes[1]
+        self.delta = item.attributes[1].distance()
         self.lines = []
         for c in item.children:
             if c.name != 'SymbolLine':
@@ -65,12 +67,12 @@ class Symbol:
 class Via:
     def __init__(self, item):
         a = item.attributes;
-        self.x = a[0]
-        self.y = a[1]
-        self.diameter = a[2]
-        self.spacing = a[3]
-        self.mask = a[4]
-        self.drill = a[5]
+        self.x = a[0].distance()
+        self.y = a[1].distance()
+        self.diameter = a[2].distance()
+        self.spacing = a[3].distance()
+        self.mask = a[4].distance()
+        self.drill = a[5].distance()
         if len(a) == 10: #burried
             self.burrFrom = a[6]
             self.burrTo = a[7]
@@ -87,12 +89,12 @@ class Element:
         self.description = a[1]
         self.name = a[2]
         self.value = a[3]
-        self.x = a[4]
-        self.y = a[5]
-        self.textx = a[6]
-        self.texty = a[7]
+        self.x = a[4].distance()
+        self.y = a[5].distance()
+        self.textx = a[6].distance()
+        self.texty = a[7].distance()
         self.tdir = a[8].num()
-        self.tscale = a[9]
+        self.tscale = a[9].num()
         self.tflags = a[10].flags()
 
         self.attributes = {}
@@ -114,32 +116,32 @@ class Element:
 
 class Line:
     def __init__(self, item):
-        self.x1 = item.attributes[0]
-        self.y1 = item.attributes[1]
-        self.x2 = item.attributes[2]
-        self.y2 = item.attributes[3]
-        self.thick = item.attributes[4]
-        self.spacing = item.attributes[5]
+        self.x1 = item.attributes[0].distance()
+        self.y1 = item.attributes[1].distance()
+        self.x2 = item.attributes[2].distance()
+        self.y2 = item.attributes[3].distance()
+        self.thick = item.attributes[4].distance()
+        self.spacing = item.attributes[5].distance()
         self.flags = item.attributes[6].flags()
 
 class Arc:
     def __init__(self, item):
-        self.x = item.attributes[0]
-        self.y = item.attributes[1]
-        self.width = item.attributes[2]
-        self.height= item.attributes[3]
-        self.thick = item.attributes[4]
-        self.spacing = item.attributes[5]
-        self.startAngle = item.attributes[6]
-        self.angle = item.attributes[7]
+        self.x = item.attributes[0].distance()
+        self.y = item.attributes[1].distance()
+        self.width = item.attributes[2].distance()
+        self.height= item.attributes[3].distance()
+        self.thick = item.attributes[4].distance()
+        self.spacing = item.attributes[5].distance()
+        self.startAngle = item.attributes[6].num()
+        self.angle = item.attributes[7].num()
         self.flags = item.attributes[8].flags()
 
 class Text:
     def __init__(self, item):
-        self.x = item.attributes[0]
-        self.y = item.attributes[1]
+        self.x = item.attributes[0].distance()
+        self.y = item.attributes[1].distance()
         self.dir = item.attributes[2].num()
-        self.scale = item.attributes[3]
+        self.scale = item.attributes[3].num()
         self.string = item.attributes[4]
         self.flags = item.attributes[5].flags()
 
@@ -148,7 +150,7 @@ class Hole:
         self.points = []
         for c in item.children:
             if c.name == '': #point
-                self.points.append((c.attributes[0], c.attributes[1]))
+                self.points.append((c.attributes[0].distance(), c.attributes[1].distance()))
 
 class Polygon:
     def __init__(self, item):
@@ -157,7 +159,7 @@ class Polygon:
         self.holes = []
         for c in item.children:
             if c.name == '': #point
-                self.points.append((c.attributes[0], c.attributes[1]))
+                self.points.append((c.attributes[0].distance(), c.attributes[1].distance()))
             elif c.name == 'Hole':
                 self.holes.append(Hole(c))
             else:
@@ -213,11 +215,11 @@ class Netlist:
 
 class Rat:
     def __init__(self, item):
-        self.x1 = item.attributes[0]
-        self.y1 = item.attributes[1]
+        self.x1 = item.attributes[0].distance()
+        self.y1 = item.attributes[1].distance()
         self.g1 = item.attributes[2]
-        self.x2 = item.attributes[3]
-        self.y2 = item.attributes[4]
+        self.x2 = item.attributes[3].distance()
+        self.y2 = item.attributes[4].distance()
         self.g2 = item.attributes[5]
         self.flags = item.attributes[6].flags()
 
@@ -237,24 +239,24 @@ class Pcb:
                 self.version = item.attributes[0]
             elif item.name == "PCB":
                 self.name = item.attributes[0]
-                self.width = item.attributes[1]
-                self.height = item.attributes[2]
+                self.width = item.attributes[1].distance()
+                self.height = item.attributes[2].distance()
             elif item.name == "Grid":
-                self.gridStep = item.attributes[0]
-                self.gridX = item.attributes[1]
-                self.gridY = item.attributes[2]
+                self.gridStep = item.attributes[0].distance()
+                self.gridX = item.attributes[1].distance()
+                self.gridY = item.attributes[2].distance()
                 self.gridVisible = item.attributes[3]
             elif item.name == "PolyArea":
-                self.polyArea = item.attributes[0]
+                self.polyArea = item.attributes[0].num()
             elif item.name == "Thermal":
-                self.thermal = item.attributes[0]
+                self.thermal = item.attributes[0].num()
             elif item.name == "DRC":
-                self.minSpace = item.attributes[0]
-                self.minOverlap = item.attributes[1]
-                self.minWidth = item.attributes[2]
-                self.minSilk = item.attributes[3]
-                self.minDrill = item.attributes[4]
-                self.minRing = item.attributes[5]
+                self.minSpace = item.attributes[0].distance()
+                self.minOverlap = item.attributes[1].distance()
+                self.minWidth = item.attributes[2].distance()
+                self.minSilk = item.attributes[3].distance()
+                self.minDrill = item.attributes[4].distance()
+                self.minRing = item.attributes[5].distance()
             elif item.name == "Flags":
                 self.flags = item.attributes[0].flags()
             elif item.name == "Groups":
@@ -282,5 +284,21 @@ class Pcb:
             else:
                 raise Exception("unknown item %s" % item.name)
 
+    def itemize(self):
+        items = []
+        for c in self.comments:
+            items.append(parsepcb.Item("comment", [c], False, None))
+        items.append(parsepcb.Item("FileVersion", [self.version], False, None))
+        items.append(parsepcb.Item("PCB", [self.name, parsepcb.nm(self.width), parsepcb.nm(self.height)], False, None))
+        items.append(parsepcb.Item("Grid", [parsepcb.nm(self.gridStep), parsepcb.nm(self.gridX),parsepcb.nm(self.gridY), self.gridVisible], False, None))
+        items.append(parsepcb.Item("PolyArea", [parsepcb.NumericValue(self.polyArea, None)], False, None))
+        items.append(parsepcb.Item("Thermal", [parsepcb.NumericValue(self.thermal, None)], False, None))
+        items.append(parsepcb.Item("DRC", [parsepcb.nm(self.minSpace), parsepcb.nm(self.minOverlap),parsepcb.nm(self.minWidth),parsepcb.nm(self.minSilk), parsepcb.nm(self.minDrill), parsepcb.nm(self.minRing)], False, None))
+        items.append(parsepcb.Item("Flags", [parsepcb.StringValue(",".join(self.flags))], True, None))
+        items.append(parsepcb.Item("Groups", [parsepcb.StringValue(':'.join([','.join(g) for g in self.groups]))], True, None))
+        items.append(parsepcb.Item("Styles", [parsepcb.StringValue(':'.join([str(s) for s in self.styles]))], False, None))
+        return items
+
 
 p = Pcb(parsepcb.load("lock.pcb"))
+parsepcb.save("lockexp.pcb", p.itemize())

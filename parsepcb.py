@@ -28,21 +28,40 @@ class CharValue:
         f.write(self.value)
         f.write("'")
 
+def nm(nm):
+    if nm % 254 == 0:
+        return NumericValue(nm / 25400, "mil")
+    else:
+        return NumericValue(nm / 1e6, "mm")
+
 class NumericValue:
     def __init__(self, value, unit):
-        if '.' in value:
+        if isinstance(value, (int, float)):
+            self.value = value
+        elif '.' in value:
             self.value = float(value)
         else:
             self.value = int(value)
         self.unit = unit
+    def __str__(self):
+        return str(self.value) + self.unit if self.unit else ''
     def save(self, f):
-        f.write(str(self.value))
-        if self.unit:
-            f.write(self.unit)
+        f.write(str(self))
     def num(self):
         if self.unit:
             raise Exception('does not expect unit')
         return self.value
+    def distance(self):
+        """ distance in nm """
+        if self.unit == 'mil':
+            return round(self.value * 0.0254 * 1e6)
+        elif self.unit == 'mm':
+            return round(self.value * 1e6)
+        elif self.value == 0:
+            return 0
+        else:
+            raise Exception("unknown units")
+            
 
 class Item:
     def __init__(self, name, attributes, old, children):
