@@ -23,6 +23,8 @@ class StringValue:
 class CharValue:
     def __init__(self, value):
         self.value = value
+    def char(self):
+        return self.value
     def save(self, f):
         f.write("'")
         f.write(self.value)

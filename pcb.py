@@ -13,11 +13,13 @@ class Style:
 
 class SymbolLine:
     def __init__(self, item):
-        self.x1 = item.attributes[0]
-        self.y1 = item.attributes[1]
-        self.x2 = item.attributes[2]
-        self.y2 = item.attributes[3]
-        self.thick = item.attributes[4]
+        self.x1 = item.attributes[0].distance()
+        self.y1 = item.attributes[1].distance()
+        self.x2 = item.attributes[2].distance()
+        self.y2 = item.attributes[3].distance()
+        self.thick = item.attributes[4].distance()
+    def itemize(self):
+        return parsepcb.Item('SymbolLine', [parsepcb.nm(self.x1), parsepcb.nm(self.y1), parsepcb.nm(self.x2), parsepcb.nm(self.y2), parsepcb.nm(self.thick)], False, None)
 
 class ElementArc:
     def __init__(self, item):
@@ -56,13 +58,15 @@ class Pad:
 
 class Symbol:
     def __init__(self, item):
-        self.char = item.attributes[0]
+        self.char = item.attributes[0].char()
         self.delta = item.attributes[1].distance()
         self.lines = []
         for c in item.children:
             if c.name != 'SymbolLine':
                 raise Exception('unknown item %s in Symbol' % c.name)
             self.lines.append(SymbolLine(c))
+    def itemize(self):
+        return parsepcb.Item("Symbol", [parsepcb.CharValue(self.char), parsepcb.nm(self.delta)], False, [l.itemize() for l in self.lines])
 
 class Via:
     def __init__(self, item):
@@ -297,6 +301,8 @@ class Pcb:
         items.append(parsepcb.Item("Flags", [parsepcb.StringValue(",".join(self.flags))], True, None))
         items.append(parsepcb.Item("Groups", [parsepcb.StringValue(':'.join([','.join(g) for g in self.groups]))], True, None))
         items.append(parsepcb.Item("Styles", [parsepcb.StringValue(':'.join([str(s) for s in self.styles]))], False, None))
+        for s in self.symbols:
+            items.append(s.itemize())
         return items
 
 
