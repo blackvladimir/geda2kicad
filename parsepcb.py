@@ -8,10 +8,11 @@ NUMBER = re.compile('(-?[\d.]+)(mil|mm)?')
 ITEMSSTART = re.compile('[ \r\t\n]+\(')
 
 class Item:
-    def __init__(self, name, attributes = [], children = []):
+    def __init__(self, name, attributes = [], old = False, children = []):
         self.name = name
         self.attributes = attributes
         self.children = children
+        self.old = old;
     def __repr__(self):
         return self.name +  repr(self.attributes) + repr(self.children)
 
@@ -45,7 +46,7 @@ def parseAttribute(s,idx):
         return n, res.end()
     raise Exception("Syntax error near idx %s, %s" % (idx, s[idx:idx+30]))
 
-def parseAttributes(s, idx):    #TODO almost same as parse items
+def parseAttributes(s, idx):
     res = []
     while True:
         idx = WHITESPACE.match(s, idx).end()
@@ -58,18 +59,19 @@ def parseItem(s, idx):
     if idx == len(s) or s[idx] == ')' :
         return None, idx + 1
     if s[idx] == '#':
-        return parseComment(s,idx)
+        return parseComment(s,idx+1)
     r = ITEM.match(s,idx)
     if not r:
         raise Exception("Syntax error near idx %s, %s" % (idx, s[idx:idx+30]))
     name = r.group(1)
     idx = r.end()
+    old = s[idx - 1] == '('
     attr, idx = parseAttributes(s, idx)
     items = None
     r = ITEMSSTART.match(s, idx)
     if r:
         items, idx = parseItems(s, r.end())
-    return Item(name, attr, items), idx
+    return Item(name, attr, old, items), idx
 
 def parseItems(s, idx):
     res = []
@@ -80,7 +82,8 @@ def parseItems(s, idx):
             return res, idx
         res.append(item)
 
-with open("lock.pcb") as f:
-    s = f.read()
-    r,idx = parseItems(s, 0)
-    print(r)
+def load(path):
+    with open(path) as f:
+        s = f.read()
+        r,idx = parseItems(s, 0)
+        return r
