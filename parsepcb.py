@@ -14,13 +14,16 @@ class StringValue:
         f.write(self.value)
         f.write('"')
     def flags(self):
-        return self.value.split(',')
+        return set(self.value.split(','))
     def array(self):
         return self.value.split(':')
     def pin(self):
         return self.value.split('-')
     def str(self):
         return self.value
+
+def flags(f):
+    return StringValue(','.join(f))
 
 class CharValue:
     def __init__(self, value):
@@ -33,13 +36,14 @@ class CharValue:
         f.write("'")
 
 def nm(nm):
+    if nm == 0:
+        return NumericValue(0, None)
     if nm % 254 == 0:
         return NumericValue(nm / 25400, "mil")
-    else:
-        return NumericValue(nm / 1e6, "mm")
+    return NumericValue(nm / 1e6, "mm")
 
 class NumericValue:
-    def __init__(self, value, unit):
+    def __init__(self, value, unit = None):
         if isinstance(value, (int, float)):
             self.value = value
         elif '.' in value:
@@ -48,7 +52,7 @@ class NumericValue:
             self.value = int(value)
         self.unit = unit
     def __str__(self):
-        return str(self.value) + self.unit if self.unit else ''
+        return str(self.value) + (self.unit if self.unit else '')
     def save(self, f):
         f.write(str(self))
     def num(self):
@@ -68,7 +72,7 @@ class NumericValue:
             
 
 class Item:
-    def __init__(self, name, attributes, old, children):
+    def __init__(self, name, attributes, old = False, children = None):
         self.name = name
         self.attributes = attributes
         self.children = children
