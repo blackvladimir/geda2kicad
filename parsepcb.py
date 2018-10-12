@@ -30,17 +30,7 @@ class NumericValue:
             self.value = int(value)
         self.unit = unit
     def save(self, f):
-        if type(self.value) == int:
-            f.write(str(self.value))
-        else:
-            if self.value == 0.0:
-                f.write("0.0000")
-            elif self.unit == 'mm':
-                f.write("%0.4f" % self.value)
-            elif self.unit == 'mil':
-                f.write("%0.2f" % self.value)
-            else:
-                f.write("%0.6f" % self.value)
+        f.write(str(self.value))
         if self.unit:
             f.write(self.unit)
 
@@ -154,5 +144,3 @@ def save(path, items):
     with open(path, 'w') as f:
         for i in items:
             i.save(f)
-
-save('lockexp.pcb', load('lock.pcb'))
