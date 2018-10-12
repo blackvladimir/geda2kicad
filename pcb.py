@@ -134,7 +134,7 @@ class Element:
     def itemize(self):
         items = []
         for k,v in self.attributes.items():
-            items.append(Item('Attribute', [StringValue(k), StringValue(v)], True))   #TODO functions for attributes?
+            items.append(Item('Attribute', [StringValue(k), StringValue(v)], True)) 
         return Item('Element', [flags(self.flags), StringValue(self.description), StringValue(self.name), StringValue(self.value), nm(self.x), nm(self.y), nm(self.textx), nm(self.texty), 
             NumericValue(self.tdir), NumericValue(self.tscale), flags(self.flags)], False, items + [l.itemize() for l in (self.lines + self.arcs + self.pins + self.pads)])
 
@@ -181,8 +181,10 @@ class Hole:
         for c in item.children:
             if c.name == '': #point
                 self.points.append((c.attributes[0].distance(), c.attributes[1].distance()))
+            else:
+                raise Exception('Unexpected item %s in Hole' % c.name)
     def itemize(self):
-        return Item('Hole', None, False, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points])  #TODO refactor point export?
+        return Item('Hole', None, False, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points]) 
 
 
 class Polygon:
@@ -198,7 +200,7 @@ class Polygon:
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
-        return Item('Polygon', [flags(self.flags)], True, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points] + [h.itemize() for h in self.holes]) #TODO holes
+        return Item('Polygon', [flags(self.flags)], True, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points] + [h.itemize() for h in self.holes])
 
 class Layer:
     def __init__(self, item):
@@ -270,6 +272,8 @@ class Rat:
 
 class Pcb:
     def __init__(self, items):
+        if isinstance(items, str):
+            items = load(items)
         self.comments = []
         self.symbols = []
         self.attributes = {}
@@ -340,7 +344,7 @@ class Pcb:
         items.append(Item("Thermal", [NumericValue(self.thermal)]))  
         items.append(Item("DRC", [nm(self.minSpace), nm(self.minOverlap),nm(self.minWidth),nm(self.minSilk), nm(self.minDrill), nm(self.minRing)]))
         items.append(Item("Flags", [flags(self.flags)], True)) 
-        items.append(Item("Groups", [StringValue(':'.join([','.join(g) for g in self.groups]))], True))   #TODO helper function array?
+        items.append(Item("Groups", [StringValue(':'.join([','.join(g) for g in self.groups]))], True))
         items.append(Item("Styles", [StringValue(':'.join([str(s) for s in self.styles]))], False))
         for s in self.symbols:
             items.append(s.itemize())
@@ -357,3 +361,5 @@ class Pcb:
         items.append(self.netlist.itemize())
         return items
 
+    def save(self, path):
+        save(path, self.itemize())
