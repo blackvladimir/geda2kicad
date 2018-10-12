@@ -110,8 +110,118 @@ class Element:
             elif c.name == "Pad":
                 self.lines.append(Pad(c))
             else:
-                print(c.name)
+                raise Exception("unknown item %s" % c.name)
 
+class Line:
+    def __init__(self, item):
+        self.x1 = item.attributes[0]
+        self.y1 = item.attributes[1]
+        self.x2 = item.attributes[2]
+        self.y2 = item.attributes[3]
+        self.thick = item.attributes[4]
+        self.spacing = item.attributes[5]
+        self.flags = item.attributes[6].split(',')
+
+class Arc:
+    def __init__(self, item):
+        self.x = item.attributes[0]
+        self.y = item.attributes[1]
+        self.width = item.attributes[2]
+        self.height= item.attributes[3]
+        self.thick = item.attributes[4]
+        self.spacing = item.attributes[5]
+        self.startAngle = item.attributes[6]
+        self.angle = item.attributes[7]
+        self.flags = item.attributes[8].split(',')
+
+class Text:
+    def __init__(self, item):
+        self.x = item.attributes[0]
+        self.y = item.attributes[1]
+        self.dir = int(item.attributes[2])
+        self.scale = item.attributes[3]
+        self.string = item.attributes[4]
+        self.flags = item.attributes[5].split(',')
+
+class Hole:
+    def __init__(self, item):
+        self.points = []
+        for c in item.children:
+            if c.name == '': #point
+                self.points.append((c.attributes[0], c.attributes[1]))
+
+class Polygon:
+    def __init__(self, item):
+        self.flags = item.attributes[0].split(',')
+        self.points = []
+        self.holes = []
+        for c in item.children:
+            if c.name == '': #point
+                self.points.append((c.attributes[0], c.attributes[1]))
+            elif c.name == 'Hole':
+                self.holes.append(Hole(c))
+            else:
+                raise Exception("unknown item %s" % c.name)
+
+class Layer:
+    def __init__(self, item):
+        self.number = int(item.attributes[0])
+        self.name = item.attributes[1]
+        self.flags = item.attributes[1].split(',')
+
+        self.lines = []
+        self.texts = []
+        self.arcs = []
+        self.polygons = []
+    
+        for c in item.children:
+            if c.name == "Line":
+                self.lines.append(Line(c))
+            elif c.name == "Text":
+                self.texts.append(Text(c))
+            elif c.name == "Arc":
+                self.arcs.append(Arc(c))
+            elif c.name == "Polygon":
+                self.polygons.append(Polygon(c))
+            else:
+                raise Exception("unknown item %s" % c.name)
+
+class Connect:
+    def __init__(self, item):
+        a = item.attributes[0].split('-')
+        self.part = a[0]
+        self.pin = a[1]
+
+class Net:
+    def __init__(self, item):
+        self.name = item.attributes[0]
+        self.style = item.attributes[1]
+
+        self.connects = []
+        for c in item.children:
+            if c.name == "Connect":
+                self.connects.append(Connect(c))
+            else:
+                raise Exception("unknown item %s" % c.name)
+
+class Netlist:
+    def __init__(self, item):
+        self.nets = []
+        for c in item.children:
+            if c.name == "Net":
+                self.nets.append(Net(c))
+            else:
+                raise Exception("unknown item %s" % c.name)
+
+class Rat:
+    def __init__(self, item):
+        self.x1 = item.attributes[0]
+        self.y1 = item.attributes[1]
+        self.g1 = item.attributes[2]
+        self.x2 = item.attributes[3]
+        self.y2 = item.attributes[4]
+        self.g2 = item.attributes[5]
+        self.flags = item.attributes[6].split(',')
 
 class Pcb:
     def __init__(self, items):
@@ -120,6 +230,8 @@ class Pcb:
         self.attributes = {}
         self.vias = []
         self.elements = []
+        self.layers = []
+        self.rats = []
         for item in items:
             if item.name == "comment":
                 self.comments.append(item.attributes[0])
@@ -163,9 +275,14 @@ class Pcb:
                 self.vias.append(Via(item))
             elif item.name == "Element":
                 self.elements.append(Element(item))
+            elif item.name == "Layer":
+                self.layers.append(Layer(item))
+            elif item.name == "NetList":
+                self.netlist = Netlist(item)
+            elif item.name == "Rat":
+                self.rats.append(Rat(item))
             else:
-                print(item.name)
+                raise Exception("unknown item %s" % item.name)
 
 
 p = Pcb(parsepcb.load("lock.pcb"))
-print(p.elements[3].attributes)

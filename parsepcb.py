@@ -5,7 +5,7 @@ ITEM = re.compile("([^ \r\t\n([]*)[ \r\t\n]*[([]")  #allow no name items
 STRING = re.compile('"([^"]*)"')
 CHAR = re.compile("'(.)'")
 NUMBER = re.compile('(-?[\d.]+)(mil|mm)?')
-ITEMSSTART = re.compile('[ \r\t\n]+\(')
+ITEMSSTART = re.compile('[ \r\t\n]*\(')
 
 class Item:
     def __init__(self, name, attributes = [], old = False, children = []):
@@ -66,7 +66,11 @@ def parseItem(s, idx):
     name = r.group(1)
     idx = r.end()
     old = s[idx - 1] == '('
-    attr, idx = parseAttributes(s, idx)
+    if name == 'Hole':  #hole does not have attributes
+        attr = None
+        idx -= 1 #move before items of hole
+    else:
+        attr, idx = parseAttributes(s, idx)
     items = None
     r = ITEMSSTART.match(s, idx)
     if r:
