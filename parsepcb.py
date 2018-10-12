@@ -13,6 +13,12 @@ class StringValue:
         f.write('"')
         f.write(self.value)
         f.write('"')
+    def flags(self):
+        return self.value.split(',')
+    def array(self):
+        return self.value.split(':')
+    def pin(self):
+        return self.value.split('-')
 
 class CharValue:
     def __init__(self, value):
@@ -33,6 +39,10 @@ class NumericValue:
         f.write(str(self.value))
         if self.unit:
             f.write(self.unit)
+    def num(self):
+        if self.unit:
+            raise Exception('does not expect unit')
+        return self.value
 
 class Item:
     def __init__(self, name, attributes, old, children):

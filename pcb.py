@@ -37,7 +37,7 @@ class Pin:
         self.drill = item.attributes[5]
         self.name = item.attributes[6]
         self.number = item.attributes[7]
-        self.flags = item.attributes[8].split(',')
+        self.flags = item.attributes[8].flags()
 
 class Pad:
     def __init__(self, item):
@@ -50,7 +50,7 @@ class Pad:
         self.mask = item.attributes[6]
         self.name = item.attributes[7]
         self.number = item.attributes[8]
-        self.flags = item.attributes[9].split(',')
+        self.flags = item.attributes[9].flags()
 
 class Symbol:
     def __init__(self, item):
@@ -75,15 +75,15 @@ class Via:
             self.burrFrom = a[6]
             self.burrTo = a[7]
             self.name = a[8]
-            self.flags = a[9].split(',')
+            self.flags = a[9].flags()
         else:
             self.name = a[6]
-            self.flags = a[7].split(',')
+            self.flags = a[7].flags()
 
 class Element:
     def __init__(self, item):
         a = item.attributes
-        self.flags = a[0].split(',')
+        self.flags = a[0].flags()
         self.description = a[1]
         self.name = a[2]
         self.value = a[3]
@@ -91,9 +91,9 @@ class Element:
         self.y = a[5]
         self.textx = a[6]
         self.texty = a[7]
-        self.tdir = int(a[8])
+        self.tdir = a[8].num()
         self.tscale = a[9]
-        self.tflags = a[10].split(',')
+        self.tflags = a[10].flags()
 
         self.attributes = {}
         self.lines = []
@@ -120,7 +120,7 @@ class Line:
         self.y2 = item.attributes[3]
         self.thick = item.attributes[4]
         self.spacing = item.attributes[5]
-        self.flags = item.attributes[6].split(',')
+        self.flags = item.attributes[6].flags()
 
 class Arc:
     def __init__(self, item):
@@ -132,16 +132,16 @@ class Arc:
         self.spacing = item.attributes[5]
         self.startAngle = item.attributes[6]
         self.angle = item.attributes[7]
-        self.flags = item.attributes[8].split(',')
+        self.flags = item.attributes[8].flags()
 
 class Text:
     def __init__(self, item):
         self.x = item.attributes[0]
         self.y = item.attributes[1]
-        self.dir = int(item.attributes[2])
+        self.dir = item.attributes[2].num()
         self.scale = item.attributes[3]
         self.string = item.attributes[4]
-        self.flags = item.attributes[5].split(',')
+        self.flags = item.attributes[5].flags()
 
 class Hole:
     def __init__(self, item):
@@ -152,7 +152,7 @@ class Hole:
 
 class Polygon:
     def __init__(self, item):
-        self.flags = item.attributes[0].split(',')
+        self.flags = item.attributes[0].flags()
         self.points = []
         self.holes = []
         for c in item.children:
@@ -165,9 +165,9 @@ class Polygon:
 
 class Layer:
     def __init__(self, item):
-        self.number = int(item.attributes[0])
+        self.number = item.attributes[0].num()
         self.name = item.attributes[1]
-        self.flags = item.attributes[1].split(',')
+        self.flags = item.attributes[1].flags()
 
         self.lines = []
         self.texts = []
@@ -188,9 +188,7 @@ class Layer:
 
 class Connect:
     def __init__(self, item):
-        a = item.attributes[0].split('-')
-        self.part = a[0]
-        self.pin = a[1]
+        self.part, self.pin = item.attributes[0].pin()
 
 class Net:
     def __init__(self, item):
@@ -221,7 +219,7 @@ class Rat:
         self.x2 = item.attributes[3]
         self.y2 = item.attributes[4]
         self.g2 = item.attributes[5]
-        self.flags = item.attributes[6].split(',')
+        self.flags = item.attributes[6].flags()
 
 class Pcb:
     def __init__(self, items):
@@ -258,14 +256,14 @@ class Pcb:
                 self.minDrill = item.attributes[4]
                 self.minRing = item.attributes[5]
             elif item.name == "Flags":
-                self.flags = item.attributes[0].split(',')
+                self.flags = item.attributes[0].flags()
             elif item.name == "Groups":
                 self.groups = []
-                for group in item.attributes[0].split(':'):
+                for group in item.attributes[0].array():
                     self.groups.append(group.split(','))
             elif item.name == "Styles":
                 self.styles = []
-                for s in item.attributes[0].split(':'):
+                for s in item.attributes[0].array():
                     self.styles.append(Style(s))
             elif item.name == "Symbol":
                 self.symbols.append(Symbol(item))
