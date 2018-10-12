@@ -1,15 +1,15 @@
-import parsepcb 
+from parsepcb import Item, parseValue, nm, NumericValue, CharValue, StringValue, load, save
 
 class Style:
     def __init__(self, string):
         fields = string.split(',')
         self.name = fields[0]
-        self.thick = parsepcb.parseValue(fields[1], 0)[0].distance()
-        self.diameter= parsepcb.parseValue(fields[2], 0)[0].distance()
-        self.drill = parsepcb.parseValue(fields[3], 0)[0].distance()
-        self.spacing = parsepcb.parseValue(fields[4], 0)[0].distance()
+        self.thick = parseValue(fields[1], 0)[0].distance() #helper function parse distance?
+        self.diameter= parseValue(fields[2], 0)[0].distance()
+        self.drill = parseValue(fields[3], 0)[0].distance()
+        self.spacing = parseValue(fields[4], 0)[0].distance()
     def __str__(self):
-        return self.name + ',' + str(parsepcb.nm(self.thick)) + ',' + str(parsepcb.nm(self.diameter)) + ',' + str(parsepcb.nm(self.drill)) + ',' + str(parsepcb.nm(self.spacing))
+        return self.name + ',' + str(nm(self.thick)) + ',' + str(nm(self.diameter)) + ',' + str(nm(self.drill)) + ',' + str(nm(self.spacing))
 
 class SymbolLine:
     def __init__(self, item):
@@ -19,7 +19,7 @@ class SymbolLine:
         self.y2 = item.attributes[3].distance()
         self.thick = item.attributes[4].distance()
     def itemize(self):
-        return parsepcb.Item('SymbolLine', [parsepcb.nm(self.x1), parsepcb.nm(self.y1), parsepcb.nm(self.x2), parsepcb.nm(self.y2), parsepcb.nm(self.thick)], False, None)
+        return Item('SymbolLine', [nm(self.x1), nm(self.y1), nm(self.x2), nm(self.y2), nm(self.thick)], False, None)
 
 class ElementArc:
     def __init__(self, item):
@@ -66,7 +66,7 @@ class Symbol:
                 raise Exception('unknown item %s in Symbol' % c.name)
             self.lines.append(SymbolLine(c))
     def itemize(self):
-        return parsepcb.Item("Symbol", [parsepcb.CharValue(self.char), parsepcb.nm(self.delta)], False, [l.itemize() for l in self.lines])
+        return Item("Symbol", [CharValue(self.char), nm(self.delta)], False, [l.itemize() for l in self.lines])
 
 class Via:
     def __init__(self, item):
@@ -83,8 +83,12 @@ class Via:
             self.name = a[8]
             self.flags = a[9].flags()
         else:
+            self.burrFrom = None
+            self.burrTo = None
             self.name = a[6]
             self.flags = a[7].flags()
+    def itemize(self):
+        return Item('Via', [nm(self.x), nm(self.y), nm(self.diameter), nm(self.spacing), nm(self.mask), nm(self.drill)] + ([self.burrFrom, self.burrTo] if self.burrTo else [])  + [self.name, StringValue(','.join(self.flags))], False, None)
 
 class Element:
     def __init__(self, item):
@@ -274,7 +278,7 @@ class Pcb:
             elif item.name == "Symbol":
                 self.symbols.append(Symbol(item))
             elif item.name == "Attribute":
-                self.attributes[item.attributes[0]] = item.attributes[1]
+                self.attributes[item.attributes[0].str()] = item.attributes[1].str()
             elif item.name == "Via":
                 self.vias.append(Via(item))
             elif item.name == "Element":
@@ -291,20 +295,24 @@ class Pcb:
     def itemize(self):
         items = []
         for c in self.comments:
-            items.append(parsepcb.Item("comment", [c], False, None))
-        items.append(parsepcb.Item("FileVersion", [self.version], False, None))
-        items.append(parsepcb.Item("PCB", [self.name, parsepcb.nm(self.width), parsepcb.nm(self.height)], False, None))
-        items.append(parsepcb.Item("Grid", [parsepcb.nm(self.gridStep), parsepcb.nm(self.gridX),parsepcb.nm(self.gridY), self.gridVisible], False, None))
-        items.append(parsepcb.Item("PolyArea", [parsepcb.NumericValue(self.polyArea, None)], False, None))
-        items.append(parsepcb.Item("Thermal", [parsepcb.NumericValue(self.thermal, None)], False, None))
-        items.append(parsepcb.Item("DRC", [parsepcb.nm(self.minSpace), parsepcb.nm(self.minOverlap),parsepcb.nm(self.minWidth),parsepcb.nm(self.minSilk), parsepcb.nm(self.minDrill), parsepcb.nm(self.minRing)], False, None))
-        items.append(parsepcb.Item("Flags", [parsepcb.StringValue(",".join(self.flags))], True, None))
-        items.append(parsepcb.Item("Groups", [parsepcb.StringValue(':'.join([','.join(g) for g in self.groups]))], True, None))
-        items.append(parsepcb.Item("Styles", [parsepcb.StringValue(':'.join([str(s) for s in self.styles]))], False, None))
+            items.append(Item("comment", [c], False, None))
+        items.append(Item("FileVersion", [self.version], False, None))
+        items.append(Item("PCB", [self.name, nm(self.width), nm(self.height)], False, None))
+        items.append(Item("Grid", [nm(self.gridStep), nm(self.gridX),nm(self.gridY), self.gridVisible], False, None))
+        items.append(Item("PolyArea", [NumericValue(self.polyArea, None)], False, None)) #helper function number
+        items.append(Item("Thermal", [NumericValue(self.thermal, None)], False, None))  
+        items.append(Item("DRC", [nm(self.minSpace), nm(self.minOverlap),nm(self.minWidth),nm(self.minSilk), nm(self.minDrill), nm(self.minRing)], False, None))
+        items.append(Item("Flags", [StringValue(",".join(self.flags))], True, None))    #TODO helper function flags
+        items.append(Item("Groups", [StringValue(':'.join([','.join(g) for g in self.groups]))], True, None))   #TODO helper function array?
+        items.append(Item("Styles", [StringValue(':'.join([str(s) for s in self.styles]))], False, None))
         for s in self.symbols:
             items.append(s.itemize())
+        for k,v in self.attributes.items():
+            items.append(Item('Attribute', [StringValue(k), StringValue(v)], True, None))
+        for v in self.vias:
+            items.append(v.itemize())
         return items
 
 
-p = Pcb(parsepcb.load("lock.pcb"))
-parsepcb.save("lockexp.pcb", p.itemize())
+p = Pcb(load("lock.pcb"))
+save("lockexp.pcb", p.itemize())

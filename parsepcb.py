@@ -19,6 +19,8 @@ class StringValue:
         return self.value.split(':')
     def pin(self):
         return self.value.split('-')
+    def str(self):
+        return self.value
 
 class CharValue:
     def __init__(self, value):
