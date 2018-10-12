@@ -12,14 +12,15 @@ class Style:
         return self.name + ',' + str(nm(self.thick)) + ',' + str(nm(self.diameter)) + ',' + str(nm(self.drill)) + ',' + str(nm(self.spacing))
 
 class SymbolLine:
-    def __init__(self, item):
+    def __init__(self, item, element):
         self.x1 = item.attributes[0].distance()
         self.y1 = item.attributes[1].distance()
         self.x2 = item.attributes[2].distance()
         self.y2 = item.attributes[3].distance()
         self.thick = item.attributes[4].distance()
+        self.element = element
     def itemize(self):
-        return Item('SymbolLine', [nm(self.x1), nm(self.y1), nm(self.x2), nm(self.y2), nm(self.thick)])
+        return Item('ElementLine' if self.element else 'SymbolLine', [nm(self.x1), nm(self.y1), nm(self.x2), nm(self.y2), nm(self.thick)])
 
 class ElementArc:
     def __init__(self, item):
@@ -70,7 +71,7 @@ class Symbol:
         for c in item.children:
             if c.name != 'SymbolLine':
                 raise Exception('unknown item %s in Symbol' % c.name)
-            self.lines.append(SymbolLine(c))
+            self.lines.append(SymbolLine(c, False))
     def itemize(self):
         return Item("Symbol", [CharValue(self.char), nm(self.delta)], False, [l.itemize() for l in self.lines])
 
@@ -121,7 +122,7 @@ class Element:
             if c.name == "Attribute":
                 self.attributes[c.attributes[0].str()] = c.attributes[1].str()
             elif c.name == "ElementLine":
-                self.lines.append(SymbolLine(c))
+                self.lines.append(SymbolLine(c, True))
             elif c.name == "ElementArc":
                 self.lines.append(ElementArc(c))
             elif c.name == "Pin":
@@ -197,7 +198,7 @@ class Polygon:
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
-        return Item('Polygon', [flags(self.flags)], False, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points] + [h.itemize() for h in self.holes]) #TODO holes
+        return Item('Polygon', [flags(self.flags)], True, [Item('', [nm(p[0]), nm(p[1])]) for p in self.points] + [h.itemize() for h in self.holes]) #TODO holes
 
 class Layer:
     def __init__(self, item):
@@ -222,13 +223,13 @@ class Layer:
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
-        return Item('Layer', [NumericValue(self.number), StringValue(self.name), flags(self.flags)], False, [g.itemize() for g in (self.lines + self.texts + self.arcs + self.polygons)])
+        return Item('Layer', [NumericValue(self.number), StringValue(self.name), flags(self.flags)], True, [g.itemize() for g in (self.lines + self.texts + self.arcs + self.polygons)])
 
 class Connect:
     def __init__(self, item):
         self.part, self.pin = item.attributes[0].pin()
     def itemize(self):
-        return Item('Connect', [StringValue(self.part + '-' + self.pin)])
+        return Item('Connect', [StringValue(self.part + '-' + self.pin)], True)
 
 class Net:
     def __init__(self, item):
@@ -242,7 +243,7 @@ class Net:
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
-        return Item('Net', [StringValue(self.name), StringValue(self.style)], False, [c.itemize() for c in self.connects])
+        return Item('Net', [StringValue(self.name), StringValue(self.style)], True, [c.itemize() for c in self.connects])
 
 class Netlist:
     def __init__(self, item):
@@ -253,7 +254,7 @@ class Netlist:
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
-        return Item('NetList', None, False, [net.itemize() for net in self.nets])
+        return Item('NetList', [], True, [net.itemize() for net in self.nets])
 
 class Rat:
     def __init__(self, item):
@@ -349,13 +350,10 @@ class Pcb:
             items.append(v.itemize())
         for e in self.elements:
             items.append(e.itemize())
+        for r in self.rats:
+            items.append(r.itemize())
         for l in self.layers:
             items.append(l.itemize())
         items.append(self.netlist.itemize())
-        for r in self.rats:
-            items.append(r.itemize())
         return items
 
-
-p = Pcb(load("lock.pcb"))
-save("lockexp.pcb", p.itemize())
