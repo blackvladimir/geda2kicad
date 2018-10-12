@@ -1,50 +1,107 @@
 import re
 WHITESPACE = re.compile("[ \r\t\n]*")
-ITEM = re.compile("([^ \r\t\n([]*)[ \r\t\n]*[([]")  #allow no name items
-#ITEM = re.compile("([^ \r\t\n([]+)[ \r\t\n]*[([]")
+ITEM = re.compile("([^ \r\t\n([]*)[ \r\t\n]*[([]") 
 STRING = re.compile('"([^"]*)"')
 CHAR = re.compile("'(.)'")
 NUMBER = re.compile('(-?[\d.]+)(mil|mm)?')
 ITEMSSTART = re.compile('[ \r\t\n]*\(')
 
+class StringValue:
+    def __init__(self, value):
+        self.value = value
+    def save(self, f):
+        f.write('"')
+        f.write(self.value)
+        f.write('"')
+
+class CharValue:
+    def __init__(self, value):
+        self.value = value
+    def save(self, f):
+        f.write("'")
+        f.write(self.value)
+        f.write("'")
+
+class NumericValue:
+    def __init__(self, value, unit):
+        if '.' in value:
+            self.value = float(value)
+        else:
+            self.value = int(value)
+        self.unit = unit
+    def save(self, f):
+        if type(self.value) == int:
+            f.write(str(self.value))
+        else:
+            if self.value == 0.0:
+                f.write("0.0000")
+            elif self.unit == 'mm':
+                f.write("%0.4f" % self.value)
+            elif self.unit == 'mil':
+                f.write("%0.2f" % self.value)
+            else:
+                f.write("%0.6f" % self.value)
+        if self.unit:
+            f.write(self.unit)
+
 class Item:
-    def __init__(self, name, attributes = [], old = False, children = []):
+    def __init__(self, name, attributes, old, children):
         self.name = name
         self.attributes = attributes
         self.children = children
         self.old = old;
     def __repr__(self):
         return self.name +  repr(self.attributes) + repr(self.children)
+    def save(self, f, level = 0):
+        if self.name == 'comment':
+            f.write('#')
+            f.write(self.attributes[0])
+            f.write('\n')
+            return
+        f.write('\t' * level)
+        f.write(self.name)
+        if self.attributes is not None:
+            f.write('(' if self.old else '[')
+            sep = ''
+            for a in self.attributes:
+                f.write(sep)
+                sep = ' '
+                a.save(f)
+            f.write(')' if self.old else ']')
+        if self.children is not None:
+            f.write('\n'+ ('\t' * level) + '(\n')
+            for c in self.children:
+                c.save(f, level + 1)
+            f.write(('\t' * level) + ')')
+        f.write('\n')
+
+        
+def parseValue(s, idx):
+    res = STRING.match(s, idx)
+    if res:
+        return StringValue(res.group(1)), res.end()
+    res = CHAR.match(s, idx)
+    if res:
+        return CharValue(res.group(1)), res.end()
+
+    res = NUMBER.match(s, idx)
+    if res:
+        return NumericValue(res.group(1), res.group(2)), res.end()
+    raise Exception("Syntax error near idx %s, %s" % (idx, s[idx:idx+30]))
+
 
 def parseString(s, idx):
     pass
 
 def parseComment(s, idx):
     end = s.find('\n', idx)
-    return Item('comment', [s[idx:end - idx]]), end
+    return Item('comment', [s[idx:end]], False, None), end
 
 def parseAttribute(s,idx):
     if s[idx] == ')' or s[idx] == ']':
         return None, idx + 1
 
-    res = STRING.match(s, idx)
-    if res:
-        return res.group(1), res.end()
-
-    res = CHAR.match(s, idx)
-    if res:
-        return res.group(1), res.end()
-
-    res = NUMBER.match(s, idx)
-    if res:
-        if res.group(2) is None:
-            n = float(res.group(1))
-        elif res.group(2) == 'mil':
-            n = float(res.group(1)) * 100
-        else: #mm
-            n = float(res.group(1)) / 254e-6
-        return n, res.end()
-    raise Exception("Syntax error near idx %s, %s" % (idx, s[idx:idx+30]))
+    return parseValue(s, idx)
 
 def parseAttributes(s, idx):
     res = []
@@ -91,3 +148,11 @@ def load(path):
         s = f.read()
         r,idx = parseItems(s, 0)
         return r
+
+
+def save(path, items):
+    with open(path, 'w') as f:
+        for i in items:
+            i.save(f)
+
+save('lockexp.pcb', load('lock.pcb'))
