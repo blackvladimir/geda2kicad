@@ -135,6 +135,32 @@ def loadSetup(s):
 class Setup:
     pass
 
+classdistance = [
+    'clearance',
+    'trace_width',
+    'via_dia',
+    'via_drill',
+    'uvia_dia',
+    'uvia_drill']
+
+def loadClass(s):
+    r = netClass()
+    r.name = s.items[0]
+    r.descr = s.items[1]
+    for c in s.items[2:]:
+        if c.name in classdistance:
+            r.__setattr__(c.name, distance(c.items[0]))
+        elif c.name == 'add_net':
+            r.nets.append(c.items[0])
+        else:
+            print('x', c.name)
+
+    return r
+
+
+class netClass:
+    nets = []
+
 def loadPcb(s):
     if s.name != 'kicad_pcb':
         raise Exception('Unknown format')
@@ -152,12 +178,16 @@ def loadPcb(s):
             pcb.layers = [Layer(int(l.name), l.items[0], l.items[1]) for l in c.items]
         elif c.name == 'setup':
             pcb.setup = loadSetup(c)
+        elif c.name == 'net':
+            pcb.nets[int(c.items[0])] = c.items[1]
+        elif c.name == 'net_class':
+            pcb.classes.append(loadClass(c))
         else:
             print('U', c.name)
 
 class Kicad:
-    def __init__(self):
-        pass
+    nets = {}
+    classes = []
 
 a = load('kicadtest.kicad_pcb')
 loadPcb(a)
