@@ -219,13 +219,18 @@ def loadLine(s):
             r.widht = distance(c.items[0])
         elif c.name == 'layer':
             r.layer = c.items[0]
+        elif c.name == 'net':
+            r.net = c.items[0]
+        elif c.name == 'tstamp':
+            r.tstamp = int(c.items[0],16)
         else:
             print(c.name)
     return r
 
 
 class Line:
-    pass
+    net = None
+    tstamp = None
 
 def loadCircle(s):
     r = Circle()
@@ -265,6 +270,22 @@ def loadPad(s):
     return r
 
 class Pad:
+    pass
+
+def loadVia(s):
+    r =  Pad()
+    for c in s.items:
+        if c.name == 'at':
+            r.pos = loadPos(c)
+        elif c.name == 'size':  
+            r.size = distance(c.items[0])
+        elif c.name == 'drill':  
+            r.drill = distance(c.items[0])
+        elif c.name == 'layers':  
+            r.layers = c.items
+    return r
+
+class Via:
     pass
 
 def load3DPos(s):
@@ -328,6 +349,65 @@ class Module:
     pads = []
     circles = []
 
+    
+
+def loadZone(s):
+    r = Zone()
+    for c in s.items:
+        if c.name == 'net':
+            r.net = int(c.items[0])
+        elif c.name == 'net_name':
+            r.net_name = c.items[0]
+        elif c.name == 'tstamp':
+            r.tstamp = int(c.items[0], 16)
+        elif c.name == 'layer':
+            r.layer = c.items[0]
+        elif c.name == 'hatch':
+            r.hatchtype = c.items[0]
+            r.hatchsize = distance(c.items[1])
+        elif c.name == 'connect_pads':
+            if c.items[0] in ['no', 'yes', 'thru_hole_only']:
+                r.connect = c.items[0]
+                clr = c.items[1]
+            else:
+                r.connect = 'thermal'
+                clr = c.items[0]
+            if clr.name != 'clearance':
+                raise Exception('expected clearance')
+            r.clearance = distance(clr.items[0])
+        elif c.name == 'min_thickness':
+            r.minthick = distance(c.items[0])
+        elif c.name == 'keepout':
+            for i in c.items:
+                if i.items[0] != 'not_allowed':
+                    raise Exception('unknown keyword '  + i.items[0])
+                r.keepouts.add(i.name)
+        elif c.name == 'fill':
+            for c2 in c.items:
+                if c2.name == 'arc_segments':
+                    r.arc_segments = int(c2.items[0])
+                elif c2.name == 'thermal_gap':
+                    r.thermal_gap = distance(c2.items[0])
+                elif c2.name == 'smoothing':
+                    r.smoothing = c2.items[0]
+                elif c2.name == 'thermal_bridge_width':
+                    r.thermal_bridge_width = distance(c2.items[0])
+                elif c2.name == 'radius':
+                    r.radis = distance(c2.items[0])
+        elif c.name == 'polygon':
+            if c.items[0].name != 'pts':
+                raise Exception('expect points')
+            for c2 in c.items[0].items:
+                if c2.name != 'xy':
+                    raise Exception('expect coordinates')
+                r.pts.append((distance(c2.items[0]), distance(c2.items[1])))
+        else:
+            print(c.name)
+
+class Zone:
+    keepouts = set()
+    pts = []
+
 def loadPcb(s):
     if s.name != 'kicad_pcb':
         raise Exception('Unknown format')
@@ -353,10 +433,14 @@ def loadPcb(s):
             pcb.modules.append(loadModule(c))
         elif c.name == 'gr_arc' or c.name == 'gr_circle':
             pcb.circles.append(loadCircle(c))
-        elif c.name == 'gr_line':
+        elif c.name == 'gr_line' or c.name == 'segment':
             pcb.lines.append(loadLine(c))
         elif c.name == 'gr_text':
             pcb.texts.append(loadText(c))
+        elif c.name == 'via':
+            pcb.vias.append(loadVia(c))
+        elif c.name == 'zone':
+            pcb.zones.append(loadZone(c))
         else:
             print('U', c.name)
 
@@ -367,6 +451,8 @@ class Kicad:
     circles = []
     lines = []
     texts = []
+    vias = []
+    zones = []
 
 a = load('kicadtest.kicad_pcb')
 loadPcb(a)
