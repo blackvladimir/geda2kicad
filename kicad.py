@@ -1,8 +1,10 @@
-from parsekicad import load, distance, save, S
+from parsekicad import load, distance, save, S, nm
 
 class StringField:
     def loadS(s, parent):
         parent.__setattr__(s.name, s.items[0])
+    def toS(parent, name):
+        return S(name, [parent.__getattribute__(name)])
 
 class ClassField:
     def __init__(self, c):
@@ -11,6 +13,8 @@ class ClassField:
         obj = self.c()
         obj.loadS(s)
         parent.__setattr__(s.name, obj)
+    def toS(self, parent, name):
+        return parent.__getattribute__(name).toS(name)
 
 class ArrayField:
     def __init__(self, c, name):
@@ -20,42 +24,76 @@ class ArrayField:
         obj = self.c()
         obj.loadS(s)
         parent.__getattribute__(self.name).append(obj)
+    def toS(self, parent, name): #TODO same name in multiple fields?
+        items = []
+        for i in parent.__getattribute__(self.name):
+            items.append(i.toS(name))
+        return items
 
 class LayersField:
     def loadS(s, parent):
         parent.layers = [Layer(int(l.name), l.items[0], l.items[1]) for l in s.items]
+    def toS(parent, name):
+        return S(name, [S(str(l.num), [l.name, l.t]) for l in parent.layers])
 
 class NetsField:
     def loadS(s, parent):
         parent.nets[int(s.items[0])] = s.items[1]
+    def toS(parent, name):
+        r = []
+        for k,v in parent.nets.items():
+            r.append(S(name, [str(k), v]))
+        return r
 
 class DistanceField:
     def loadS(s, parent):
         parent.__setattr__(s.name, distance(s.items[0]))
+    def toS(parent, name):
+        return S(name, [nm(parent.__getattribute__(name))])
+
 class IntField:
     def loadS(s, parent):
         parent.__setattr__(s.name, int(s.items[0]))
+    def toS(parent, name):
+        return S(name, [str(parent.__getattribute__(name))])
 class SizeField:
     def loadS(s, parent):
         parent.__setattr__(s.name, (distance(s.items[0]), distance(s.items[1])))
+    def toS(parent, name):
+        f = parent.__getattribute__(name)
+        return S(name, [nm(f[0]), nm(f[1])])
 class BoolField:
     def loadS(s, parent):
         parent.__setattr__(s.name, s.items[0] in ['yes', 'true'])
+    def toS(parent, name):
+        return S(name, ['yes' if parent.__getattribute__(name) else 'no'])
 class HexField:
     def loadS(s, parent):
         parent.__setattr__(s.name, int(s.items[0], 16))
+    def toS(parent, name):
+        return S(name, [hex(parent.__getattribute__(name))[2:]])
 class NetArrayField:
     def loadS(s, parent):
         parent.nets.append(s.items[0])
+    def toS(parent, name):
+        return [S(name, [n]) for n in parent.nets]
 class NetField:
     def loadS(s, parent):
         parent.net = (int(s.items[0]), s.items[1])
+    def toS(parent, name):
+        return S(name, [str(parent.net[0]), parent.net[1]])
 class PosField:
     def loadS(s, parent):
         if len(s.items) == 3:
             parent.__setattr__(s.name, (distance(s.items[0]), distance(s.items[1]), float(s.items[2])))
         else:
             parent.__setattr__(s.name, (distance(s.items[0]), distance(s.items[1])))
+    def toS(parent, name):
+        f = parent.__getattribute__(name)
+        if len(f) == 3:
+            return S(name, [nm(f[0]), nm(f[1]), str(f[2])])
+        else:
+            return S(name, [nm(f[0]), nm(f[1])])
 class FontField:
     def loadS(s, parent):
         parent.italic = False
@@ -68,28 +106,44 @@ class FontField:
                 DistanceField.loadS(c, parent)
             else:
                 raise Exception('unknown field ' + c.name)
+    def toS(parent, name):
+        i = [SizeField.toS(parent, 'size'), DistanceField.toS(parent,' thickness')]
+        if parent.italic:
+            i.append('italic')
+        return S(name, i)
 
 class LayerSelectionField:
     def loadS(s, parent):
         l1, l2 = s.items[0].split('_')
         parent.lselect1 = int(l1[2:], 16)
         parent.lselect2 = int(l2, 16)
+    def toS(parent, name):
+        return S(name, [hex(parent.lselect1) + '_' + hex(parent.lselect2)])
 class FlagField:
     def loadS(s, parent):
-        parent.__setattr__(s.name, set(s.items))
+        parent.__setattr__(s.name, s.items)
+    def toS(parent, name):
+        return S(name, parent.__getattribute__(name))
 class Pos3DField:
     def loadS(s, parent):
         pos = s.items[0]
         if pos.name != 'xyz':
             raise Exception('unknown coordinates ' + pos.name)
         parent.__setattr__(s.name, (distance(pos.items[0]), distance(pos.items[1]), distance(pos.items[2])))
+    def toS(parent, name):
+        f = parent.__getattribute__(name)
+        return S(name, [S('xyz', [nm(f[0]), nm(f[1]), nm(f[2])])])
 class FloatField:
     def loadS(s, parent):
         parent.__setattr__(s.name, float(s.items[0]))
+    def toS(parent, name):
+        return S(name, [str(parent.__getattribute__(name))])
 class HatchField:
     def loadS(s, parent):
         parent.hatchtype = s.items[0]
         parent.hatchsize = distance(s.items[1])
+    def toS(parent, name):
+        return S(name, [parent.hatchtype, nm(parent.hatchsize)])
 class ConnectField:
     def loadS(s, parent):
         if s.items[0] in ['no', 'yes', 'thru_hole_only']:
@@ -101,6 +155,9 @@ class ConnectField:
         if clr.name != 'clearance':
             raise Exception('expected clearance')
         parent.clearance = distance(clr.items[0])
+    def toS(parent, name):
+        i = [ parent.connect ] if parent.connect != 'thermal' else []
+        return S(name, i + [nm(parent.clearance)])
 class KeepoutsField:
     def loadS(s, parent):
         parent.keepouts = set()
@@ -108,6 +165,8 @@ class KeepoutsField:
             if i.items[0] != 'not_allowed':
                 raise Exception('unknown keyword '  + i.items[0])
             parent.keepouts.add(i.name)
+    def toS(parent, name):
+        return S(name, [ S(k, ['not_allowed']) for k in parent.keepouts])
 class PointsField:
     def loadS(s, parent):
         parent.pts = []
@@ -117,13 +176,29 @@ class PointsField:
             if c.name != 'xy':
                 raise Exception('expect coordinates')
             parent.pts.append((distance(c.items[0]), distance(c.items[1])))
+    def toS(parent, name):
+        return S(name, [ S('pts', [ S('xy', [nm(p[0]), nm(p[1])]) for p in parent.pts]) ])
 
 class Loadable:
     def loadS(self,s):
         self.loadFields(s.items)
+    def toS(self, name):
+        return S(name, self.fieldsToS())
     def loadFields(self, items):
         for i in items:
             self.fields[i.name].loadS(i, self)
+    def fieldsToS(self):
+        r = []
+        for name,field in self.fields.items():
+            try:
+                s = field.toS(self, name)
+                if isinstance(s, S):
+                    r.append(s)
+                else:
+                    r += s  #can return array
+            except AttributeError:  #blank fields are skipped
+                pass
+        return r
 
 
 class General(Loadable):
@@ -135,8 +210,6 @@ class General(Loadable):
             'modules' : IntField,
             'nets' : IntField
             }
-    def loadS(self, s):
-        self.loadFields(s.items)
 
 class Layer:
     def __init__(self, num, name, t):
@@ -363,7 +436,7 @@ class Zone(Loadable):
 class Kicad(Loadable):
     fields = {
             'version' : StringField,
-            'host' : StringField,
+            'host' : FlagField,
             'general' : ClassField(General),
             'version' : StringField,
             'page' : StringField,
@@ -389,7 +462,7 @@ class Kicad(Loadable):
     vias = []
     zones = []
     def toS(self):
-        return S('kicad_pcb', [])
+        return S('kicad_pcb', self.fieldsToS())
     def loadS(self, s):
         if s.name != 'kicad_pcb':
             raise Exception('Unknown format')
@@ -400,8 +473,6 @@ class Kicad(Loadable):
 s = load('kicadtest.kicad_pcb')
 pcb = Kicad()
 pcb.loadS(s)
-print(pcb.layers)
-#pcb = loadPcb(a)
-#s = pcb.toS()
-#save('exp.kicad_pcb', s)
+s = pcb.toS()
+save('exp.kicad_pcb', s)
 

@@ -66,6 +66,9 @@ def parseS(s, idx):
 def distance(s):
     return round(float(s) * 1e6)
 
+def nm(nm):
+    return str(nm / 1e6)
+
 
 def load(path):
     with open(path) as f:
