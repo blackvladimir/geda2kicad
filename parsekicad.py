@@ -25,7 +25,7 @@ class S:
                 f.write(' ')
                 if not i:
                     f.write('""')
-                elif '(' in i or ')' in i or ' ' in i:
+                elif '(' in i or ')' in i or ' ' in i or '\t' in i:
                     f.write('"')
                     f.write(i)
                     f.write('"')
@@ -63,6 +63,9 @@ def parseS(s, idx):
             return S(name, items), idx
         items.append(value)
 
+def distance(s):
+    return round(float(s) * 1e6)
+
 
 def load(path):
     with open(path) as f:
@@ -76,5 +79,3 @@ def save(path, s):
     with open(path,'w') as f:
         s.save(f, 0)
 
-a = load('kicadtest.kicad_pcb')
-save('pok.kicad_pcb', a)
