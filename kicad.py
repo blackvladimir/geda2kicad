@@ -17,7 +17,7 @@ def loadGeneral(s):
         elif c.name == 'nets':
             g.nets = int(c.items[0])
         else:
-            print(c.name)
+            raise Exception('unknown keywod ' + c.name)
     return g
 
 class General:
@@ -75,7 +75,7 @@ def loadPlotParams(s):
         elif c.name in plotint:
             r.__setattr__(c.name, int(c.items[0]))
         else:
-            print('x', c.name)
+            raise Exception('unknown keywod ' + c.name)
 
     return r
 
@@ -129,8 +129,7 @@ def loadSetup(s):
         elif c.name == 'pcbplotparams':
             r.plotparams = loadPlotParams(c)
         else:
-            print('x', c.name)
-
+            raise Exception('unknown keywod ' + c.name)
     return r
 
 class Setup:
@@ -154,8 +153,7 @@ def loadClass(s):
         elif c.name == 'add_net':
             r.nets.append(c.items[0])
         else:
-            print('x', c.name)
-
+            raise Exception('unknown keywod ' + c.name)
     return r
 
 
@@ -193,15 +191,14 @@ def loadText(s):
                         elif c3.name == 'thickness':
                             r.thickness = distance(c3.items[0])
                         else:
-                            print(c3.name)
+                            raise Exception('unknown keywod ' + c3.name)
                 elif c2.name == 'justify':
                     for c3 in c2.items:
                         r.justify.add(c3)
                 else:
-                    print(c2.name)
+                    raise Exception('unknown keywod ' + c2.name)
         else:
-            print('T', c.name)
-
+            raise Exception('unknown keywod ' + c.name)
 
 class Text:
     italic = False
@@ -224,7 +221,7 @@ def loadLine(s):
         elif c.name == 'tstamp':
             r.tstamp = int(c.items[0],16)
         else:
-            print(c.name)
+            raise Exception('unknown keywod ' + c.name)
     return r
 
 
@@ -247,7 +244,7 @@ def loadCircle(s):
         elif c.name == 'angle':
             r.angle = float(c.items[0])
         else:
-            print(c.name)
+            raise Exception('unknown keywod ' + c.name)
 
 
 class Circle:
@@ -305,7 +302,7 @@ def loadModel(s):
         elif c.name == 'rotate':
             r.rotate = load3DPos(c.items[0])
         else:
-            print(c)
+            raise Exception('unknown keywod ' + c.name)
 
 
 class Model:
@@ -339,7 +336,7 @@ def loadModule(s):
         elif c.name == 'attr':
             r.attr = c.items[0]
         else:
-            print('x', c.name)
+            raise Exception('unknown keywod ' + c.name)
 
     return r
 
@@ -402,7 +399,7 @@ def loadZone(s):
                     raise Exception('expect coordinates')
                 r.pts.append((distance(c2.items[0]), distance(c2.items[1])))
         else:
-            print(c.name)
+            raise Exception('unknown keywod ' + c.name)
 
 class Zone:
     keepouts = set()
@@ -442,7 +439,7 @@ def loadPcb(s):
         elif c.name == 'zone':
             pcb.zones.append(loadZone(c))
         else:
-            print('U', c.name)
+            raise Exception('unknown keywod ' + c.name)
 
 class Kicad:
     nets = {}
