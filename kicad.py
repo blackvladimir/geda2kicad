@@ -83,31 +83,32 @@ class PlotParams:
     pass
 
 setupdistance = [
-        'last_trace_width',
-        'trace_clearance',
-        'zone_clearance',
-        'trace_min',
-        'segment_width',
-        'edge_width',
-        'via_size',
-        'via_drill',
-        'via_min_size',
-        'via_min_drill',
-        'uvia_size',
-        'uvia_drill',
-        'uvia_min_size',
-        'uvia_min_drill',
-        'pcb_text_width',
-        'mod_edge_width',
-        'mod_text_width',
-        'pad_drill',
-        'pad_to_mask_clearance']
+    'last_trace_width',
+    'trace_clearance',
+    'zone_clearance',
+    'trace_min',
+    'segment_width',
+    'edge_width',
+    'via_size',
+    'via_drill',
+    'via_min_size',
+    'via_min_drill',
+    'uvia_size',
+    'uvia_drill',
+    'uvia_min_size',
+    'uvia_min_drill',
+    'pcb_text_width',
+    'mod_edge_width',
+    'mod_text_width',
+    'pad_drill',
+    'pad_to_mask_clearance']
 
 setupsize = [
     'mod_text_size',
     'pad_size',
     'pcb_text_size',
-    'aux_axis_origin']
+    'aux_axis_origin',
+    'grid_origin']
 
 setupbool = [
     'uvias_allowed',
@@ -161,6 +162,172 @@ def loadClass(s):
 class netClass:
     nets = []
 
+modulestrings = [
+        'layer',
+        'descr',
+        'tags',
+        'path']
+
+def loadText(s):
+    r = Text()
+    r.t = s.name
+    i = 1
+    if s.name == 'fp_text':
+        r.t = s.items[0]
+        i += 1
+    r.text = s.items[i]
+    for c in s.items[i:]:
+        if c.name == 'at':
+            r.pos = loadPos(c)
+        elif c.name == 'layer':
+            r.layer = c.items[0]
+        elif c.name == 'effects':   #TODO function for efects parsing
+            for c2 in c.items:
+                if c2.name == 'font':
+                    for c3 in c2.items:
+                        if c3 == 'italic':
+                            r.italic = True
+                        elif c3.name == 'size':
+                            r.sx = distance(c3.items[0])
+                            r.sy = distance(c3.items[1])
+                        elif c3.name == 'thickness':
+                            r.thickness = distance(c3.items[0])
+                        else:
+                            print(c3.name)
+                elif c2.name == 'justify':
+                    for c3 in c2.items:
+                        r.justify.add(c3)
+                else:
+                    print(c2.name)
+        else:
+            print('T', c.name)
+
+
+class Text:
+    italic = False
+    justify = set()
+
+def loadLine(s):
+    r = Line()
+    r.t = s.name
+    for c in s.items:
+        if c.name == 'start':
+            r.start = (distance(c.items[0]), distance(c.items[1]))
+        elif c.name == 'end':
+            r.end = (distance(c.items[0]), distance(c.items[1]))
+        elif c.name == 'width':
+            r.widht = distance(c.items[0])
+        elif c.name == 'layer':
+            r.layer = c.items[0]
+        else:
+            print(c.name)
+    return r
+
+
+class Line:
+    pass
+
+def loadCircle(s):
+    r = Circle()
+    r.t = s.name
+    for c in s.items:
+        if c.name == 'center' or c.name == 'start':
+            r.center = (distance(c.items[0]), distance(c.items[1]))
+        elif c.name == 'end':
+            r.end = (distance(c.items[0]), distance(c.items[1]))
+        elif c.name == 'width':
+            r.widht = distance(c.items[0])
+        elif c.name == 'layer':
+            r.layer = c.items[0]
+        elif c.name == 'angle':
+            r.angle = float(c.items[0])
+        else:
+            print(c.name)
+
+
+class Circle:
+    angle = 360
+
+def loadPad(s):
+    r =  Pad()
+    r.name = s.items[0]
+    r.t = s.items[1]
+    r.shape = s.items[2]
+    for c in s.items[3:]:
+        if c.name == 'at':
+            r.pos = loadPos(c)
+        elif c.name == 'size':  
+            r.size = (distance(c.items[0]), distance(c.items[1]))    #todo load size
+        elif c.name == 'drill':  
+            r.drill = distance(c.items[0])
+        elif c.name == 'layers':  
+            r.layers = c.items
+    return r
+
+class Pad:
+    pass
+
+def load3DPos(s):
+    if s.name == 'xyz':
+        return distance(s.items[0]), distance(s.items[1]), distance(s.items[2])
+    raise Exception('unknown coordinates ' + s.name) 
+
+
+def loadModel(s):
+    r = Model()
+    r.path = s.items[0]
+    for c in s.items[1:]:
+        if c.name == 'at':
+            r.pos = load3DPos(c.items[0])
+        elif c.name == 'scale':
+            r.scale = load3DPos(c.items[0])
+        elif c.name == 'rotate':
+            r.rotate = load3DPos(c.items[0])
+        else:
+            print(c)
+
+
+class Model:
+    pass
+
+def loadPos(s):
+    return distance(s.items[0]), distance(s.items[1]), float(s.items[2]) if len(s.items) == 3 else 0
+
+def loadModule(s):
+    r = Module()
+    r.name = s.items[0]
+    for c in s.items[1:]:
+        if c.name in modulestrings:
+            r.__setattr__(c.name, c.items[0])
+        elif c.name == 'tedit':
+            r.tedit = int(c.items[0],16)
+        elif c.name == 'tstamp':
+            r.tstamp = int(c.items[0],16)
+        elif c.name == 'at':
+            r.pos = loadPos(c)
+        elif c.name == 'fp_text':
+            r.texts.append(loadText(c))
+        elif c.name == 'fp_line':
+            r.lines.append(loadLine(c))
+        elif c.name == 'fp_circle':
+            r.circles.append(loadCircle(c))
+        elif c.name == 'pad':
+            r.pads.append(loadPad(c))
+        elif c.name == 'model':
+            r.model = loadModel(c)
+        elif c.name == 'attr':
+            r.attr = c.items[0]
+        else:
+            print('x', c.name)
+
+    return r
+
+class Module:
+    texts = []
+    lines = []
+    pads = []
+    circles = []
+
 def loadPcb(s):
     if s.name != 'kicad_pcb':
         raise Exception('Unknown format')
@@ -182,12 +349,24 @@ def loadPcb(s):
             pcb.nets[int(c.items[0])] = c.items[1]
         elif c.name == 'net_class':
             pcb.classes.append(loadClass(c))
+        elif c.name == 'module':
+            pcb.modules.append(loadModule(c))
+        elif c.name == 'gr_arc' or c.name == 'gr_circle':
+            pcb.circles.append(loadCircle(c))
+        elif c.name == 'gr_line':
+            pcb.lines.append(loadLine(c))
+        elif c.name == 'gr_text':
+            pcb.texts.append(loadText(c))
         else:
             print('U', c.name)
 
 class Kicad:
     nets = {}
     classes = []
+    modules = []
+    circles = []
+    lines = []
+    texts = []
 
 a = load('kicadtest.kicad_pcb')
 loadPcb(a)
