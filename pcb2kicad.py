@@ -1,5 +1,6 @@
 from pcb import Pcb
-from kicad import Kicad, NetClass, Setup, Via, Segment, Line, Text, Effects
+from kicad import Kicad, NetClass, Setup, Via, Segment, Line, Text, Effects, Arc
+from math import sin, cos, pi
 
 
 def getLayerName(l): #TODO use groups and generate layer map?
@@ -78,7 +79,14 @@ for l in pcb.layers:
         t.t = None
         kicad.texts.append(t)
     for arc in l.arcs:
-        pass
+        a = Arc()
+        a.start = (arc.x, arc.y)
+        r = arc.width #pcb probably uses just width
+        a.end = (arc.x - r * cos(arc.startAngle / 180 * pi), arc.y + r * sin(arc.startAngle / 180 * pi))
+        a.angle = -arc.angle
+        a.layer = layer
+        a.width = arc.thick
+        kicad.arcs.append(a)    #TODO detect circles?
     for poly in l.polygons:
         pass
 
