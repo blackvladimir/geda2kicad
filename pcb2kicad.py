@@ -1,5 +1,5 @@
 from pcb import Pcb
-from kicad import Kicad, NetClass, Setup, Via, Segment, Line, Text, Effects, Arc
+from kicad import Kicad, NetClass, Setup, Via, Segment, Line, Text, Effects, Arc, Zone
 from math import sin, cos, pi
 
 
@@ -88,6 +88,15 @@ for l in pcb.layers:
         a.width = arc.thick
         kicad.arcs.append(a)    #TODO detect circles?
     for poly in l.polygons:
-        pass
+        z = Zone()
+        z.layer = layer     #TODO detect net?
+        z.pts = poly.points
+        kicad.zones.append(z)
+        for h in poly.holes:
+            z = Zone()
+            z.layer = layer
+            z.pts = h.points
+            z.keepouts = {'copperpour'}
+            kicad.zones.append(z)
 
 kicad.save('export.kicad_pcb')
