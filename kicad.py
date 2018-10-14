@@ -27,7 +27,10 @@ class ArrayField:
     def toS(self, parent, name):
         items = []
         for i in parent.__getattribute__(self.name):
-            items.append(i.toS(name))
+            try:
+                items.append(i.toS(name))
+            except AttributeError as e:
+                raise Exception(e) #attrbute error would be ignored by caller
         return items
 
 class LayersField:
@@ -286,7 +289,6 @@ class Setup(Loadable):
 
 
 class NetClass(Loadable):
-    nets = []
     fields = {
             'clearance' : DistanceField,
             'trace_width' : DistanceField,
@@ -296,7 +298,8 @@ class NetClass(Loadable):
             'uvia_drill' : DistanceField,
             'add_net' : NetArrayField
             }
-
+    def __init__(self):
+        self.nets = []
     def loadS(self, s):
         self.name = s.items[0]
         self.descr = s.items[1]
@@ -318,7 +321,6 @@ class Text(Loadable):
             'effects' : ClassField(Effects)
             }
     def loadS(self, s):
-        self.key = s.name
         if s.name == 'fp_text':
             self.t = s.items[0]
             i = 1
@@ -498,12 +500,9 @@ class Kicad(Loadable):
         if s.name != 'kicad_pcb':
             raise Exception('Unknown format')
         self.loadFields(s.items)
-
-
-
-s = load('kicadtest.kicad_pcb')
-pcb = Kicad()
-pcb.loadS(s)
-s = pcb.toS()
-save('exp.kicad_pcb', s)
-
+    def load(self, path):
+        s = load(path)
+        self.loadS(s)
+    def save(self, path):
+        s = self.toS()
+        save(path, s)
