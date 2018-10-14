@@ -62,7 +62,10 @@ class NumericValue:
     def distance(self):
         """ distance in nm """
         if self.unit == 'mil':
-            return round(self.value * 0.0254 * 1e6)
+            v = round(self.value * 0.0254 * 1e6)
+            if abs(round(v / 1e4) - v / 1e4) < 0.0254:    #it is in mils but should be in mm
+                v = round(v / 1e4) * 1e4
+            return v
         elif self.unit == 'mm':
             return round(self.value * 1e6)
         elif self.value == 0:
