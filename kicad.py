@@ -24,7 +24,7 @@ class ArrayField:
         obj = self.c()
         obj.loadS(s)
         parent.__getattribute__(self.name).append(obj)
-    def toS(self, parent, name): #TODO same name in multiple fields?
+    def toS(self, parent, name):
         items = []
         for i in parent.__getattribute__(self.name):
             items.append(i.toS(name))
@@ -66,12 +66,17 @@ class BoolField:
     def loadS(s, parent):
         parent.__setattr__(s.name, s.items[0] in ['yes', 'true'])
     def toS(parent, name):
+        return S(name, ['true' if parent.__getattribute__(name) else 'false'])
+class YesNoField:
+    def loadS(s, parent):
+        parent.__setattr__(s.name, s.items[0] in ['yes', 'true'])
+    def toS(parent, name):
         return S(name, ['yes' if parent.__getattribute__(name) else 'no'])
 class HexField:
     def loadS(s, parent):
         parent.__setattr__(s.name, int(s.items[0], 16))
     def toS(parent, name):
-        return S(name, [hex(parent.__getattribute__(name))[2:]])
+        return S(name, [hex(parent.__getattribute__(name))[2:].upper()])
 class NetArrayField:
     def loadS(s, parent):
         parent.nets.append(s.items[0])
@@ -107,7 +112,7 @@ class FontField:
             else:
                 raise Exception('unknown field ' + c.name)
     def toS(parent, name):
-        i = [SizeField.toS(parent, 'size'), DistanceField.toS(parent,' thickness')]
+        i = [SizeField.toS(parent, 'size'), DistanceField.toS(parent,'thickness')]
         if parent.italic:
             i.append('italic')
         return S(name, i)
@@ -118,7 +123,7 @@ class LayerSelectionField:
         parent.lselect1 = int(l1[2:], 16)
         parent.lselect2 = int(l2, 16)
     def toS(parent, name):
-        return S(name, [hex(parent.lselect1) + '_' + hex(parent.lselect2)])
+        return S(name, [hex(parent.lselect1) + '_' + hex(parent.lselect2)[2:]])
 class FlagField:
     def loadS(s, parent):
         parent.__setattr__(s.name, s.items)
@@ -157,7 +162,7 @@ class ConnectField:
         parent.clearance = distance(clr.items[0])
     def toS(parent, name):
         i = [ parent.connect ] if parent.connect != 'thermal' else []
-        return S(name, i + [nm(parent.clearance)])
+        return S(name, i + [S('clearance', [nm(parent.clearance)])])
 class KeepoutsField:
     def loadS(s, parent):
         parent.keepouts = set()
@@ -219,14 +224,20 @@ class Layer:
 
 class PlotParams(Loadable):
     fields = {
+        'layerselection' : LayerSelectionField,
         'usegerberextensions' : BoolField,
         'usegerberattributes' : BoolField,
         'usegerberadvancedattributes' : BoolField,
         'creategerberjobfile' : BoolField,
         'excludeedgelayer' : BoolField,
+        'linewidth' : DistanceField,
         'plotframeref' : BoolField,
         'viasonmask' : BoolField,
+        'mode' : IntField,
         'useauxorigin' : BoolField,
+        'hpglpennumber' : IntField,
+        'hpglpenspeed' : IntField,
+        'hpglpendiameter' : DistanceField,
         'psnegative' : BoolField,
         'psa4output' : BoolField,
         'plotreference' : BoolField,
@@ -234,17 +245,11 @@ class PlotParams(Loadable):
         'plotinvisibletext' : BoolField,
         'padsonsilk' : BoolField,
         'subtractmaskfromsilk' : BoolField,
-        'mirror' : BoolField,
-        'linewidth' : DistanceField,
-        'hpglpendiameter' : DistanceField,
         'outputformat' : IntField,
         'drillshape' : IntField,
+        'mirror' : BoolField,
         'scaleselection' : IntField,
-        'mode' : IntField,
-        'hpglpennumber' : IntField,
-        'hpglpenspeed' : IntField,
-        'outputdirectory' : StringField,
-        'layerselection' : LayerSelectionField
+        'outputdirectory' : StringField
         }
 
 class Setup(Loadable):
@@ -252,6 +257,7 @@ class Setup(Loadable):
             'last_trace_width' : DistanceField,
             'trace_clearance' : DistanceField,
             'zone_clearance' : DistanceField,
+            'zone_45_only' : YesNoField,
             'trace_min' : DistanceField,
             'segment_width' : DistanceField,
             'edge_width' : DistanceField,
@@ -261,26 +267,25 @@ class Setup(Loadable):
             'via_min_drill' : DistanceField,
             'uvia_size' : DistanceField,
             'uvia_drill' : DistanceField,
+            'uvias_allowed' : YesNoField,
             'uvia_min_size' : DistanceField,
             'uvia_min_drill' : DistanceField,
             'pcb_text_width' : DistanceField,
+            'pcb_text_size' : SizeField,
             'mod_edge_width' : DistanceField,
+            'mod_text_size' : SizeField,
             'mod_text_width' : DistanceField,
+            'pad_size' : SizeField,
             'pad_drill' : DistanceField,
             'pad_to_mask_clearance' : DistanceField,
-            'mod_text_size' : SizeField,
-            'pad_size' : SizeField,
-            'pcb_text_size' : SizeField,
             'aux_axis_origin' : SizeField,
             'grid_origin' : SizeField,
-            'uvias_allowed' : BoolField,
-            'zone_45_only' : BoolField,
             'visible_elements' : HexField,
             'pcbplotparams' : ClassField(PlotParams)
             }
 
 
-class netClass(Loadable):
+class NetClass(Loadable):
     nets = []
     fields = {
             'clearance' : DistanceField,
@@ -296,6 +301,8 @@ class netClass(Loadable):
         self.name = s.items[0]
         self.descr = s.items[1]
         self.loadFields(s.items[2:])
+    def toS(self, name):
+        return S(name, [self.name, self.descr] + self.fieldsToS())
 
 class Effects(Loadable):
     fields = {
@@ -312,15 +319,30 @@ class Text(Loadable):
             }
     def loadS(self, s):
         self.key = s.name
-        i = 1
         if s.name == 'fp_text':
             self.t = s.items[0]
-            i += 1
+            i = 1
+        else:
+            self.t = None
+            i = 0
         self.text = s.items[i]
-        self.loadFields(s.items[i:])
+        self.loadFields(s.items[i+1:])
+    def toS(self, name):
+        if self.t:
+            return S(name, [self.t, self.text] + self.fieldsToS())
+        else:
+            return S(name, [self.text] + self.fieldsToS())
 
 
 class Line(Loadable):
+    fields = {
+            'start' : PosField,
+            'end' : PosField,
+            'layer' : StringField,
+            'width' : DistanceField,
+            }
+
+class Segment(Loadable):
     fields = {
             'start' : PosField,
             'end' : PosField,
@@ -329,24 +351,23 @@ class Line(Loadable):
             'net' : StringField,
             'tstamp' : HexField
             }
-    def loadS(self, s):
-        self.key = s.name
-        self.loadFields(s.items)
 
+class Arc(Loadable):
+    fields = {
+            'start' : PosField,
+            'end' : PosField,
+            'angle' : FloatField,
+            'layer' : StringField,
+            'width' : DistanceField
+            }
 
 class Circle(Loadable):
     fields = {
             'center' : PosField,
-            'start' : PosField, #TODO alias, center is for circle star tis for arc - meand same thing?
             'end' : PosField,
-            'width' : DistanceField,
             'layer' : StringField,
-            'angle' : FloatField
+            'width' : DistanceField
             }
-    def loadS(self, s):
-        self.t = s.name
-        self.loadFields(s.items)
-    angle = 360
 
 class Pad(Loadable):
     fields = {
@@ -361,7 +382,8 @@ class Pad(Loadable):
         self.t = s.items[1]
         self.shape = s.items[2]
         self.loadFields(s.items[3:])
-    pass
+    def toS(self, name):
+        return S(name, [self.name, self.t, self.shape] + self.fieldsToS())
 
 class Via(Loadable):
     fields = {
@@ -381,39 +403,45 @@ class Model(Loadable):
     def loadS(self, s):
         self.path = s.items[0]
         self.loadFields(s.items[1:])
+    def toS(self, name):
+        return S(name, [self.path] + self.fieldsToS())
 
 class Module(Loadable):
     fields = {
+            'layer' : StringField,
             'tedit' : HexField,
             'tstamp' : HexField,
             'at' : PosField,
+            'descr' : StringField,
+            'tags' : StringField,
+            'attr' : StringField,
+            'path' : StringField,
             'fp_text' : ArrayField(Text, 'texts'),
             'fp_line' : ArrayField(Line, 'lines'),
             'fp_circle' : ArrayField(Circle, 'circles'),
-            'fp_arc' : ArrayField(Circle, 'circles'),
+            'fp_arc' : ArrayField(Arc, 'arcs'),
             'pad' : ArrayField(Pad, 'pads'),
             'model' : ClassField(Model),
-            'attr' : StringField,
-            'layer' : StringField,
-            'descr' : StringField,
-            'tags' : StringField,
-            'path' : StringField,
             }
 
-    texts = []
-    lines = []
-    pads = []
-    circles = []
+    def __init__(self):
+        self.texts = []
+        self.lines = []
+        self.pads = []
+        self.circles = []
+        self.arcs = []
     def loadS(self, s):
         self.name = s.items[0]
         self.loadFields(s.items[1:])
+    def toS(self, name):
+        return S(name, [self.name] + self.fieldsToS())
 
 class Fill(Loadable):
     fields = {
                 'arc_segments': IntField,
                 'thermal_gap': DistanceField,
-                'smoothing': StringField,
                 'thermal_bridge_width': DistanceField,
+                'smoothing': StringField,
                 'radius': DistanceField
             }
 
@@ -421,15 +449,15 @@ class Zone(Loadable):
     fields = {
             'net': IntField,
             'net_name': StringField,
-            'timestamp': HexField,
+            'layer' : StringField,
+            'tstamp' : HexField,
             'hatch' : HatchField,
+            'timestamp': HexField,
             'connect_pads' : ConnectField,
             'min_thickness' : DistanceField,
             'keepout' : KeepoutsField,
             'fill' : ClassField(Fill),
-            'polygon' : PointsField,
-            'layer' : StringField,
-            'tstamp' : HexField
+            'polygon' : PointsField
             }
     pts = []
 
@@ -443,24 +471,27 @@ class Kicad(Loadable):
             'layers' : LayersField,
             'setup' : ClassField(Setup),
             'net':  NetsField,
-            'net_class': ArrayField(netClass, 'classes'),
+            'net_class': ArrayField(NetClass, 'classes'),
             'module': ArrayField(Module, 'modules'),
-            'gr_arc': ClassField(Circle),
+            'gr_arc': ArrayField(Arc, 'arcs'),
             'gr_circle': ArrayField(Circle, 'circles'),
-            'gr_line': ArrayField(Line, 'lines'),
-            'segment': ArrayField(Line, 'lines'),
             'gr_text': ArrayField(Text, 'texts'),
+            'gr_line': ArrayField(Line, 'lines'),
+            'segment': ArrayField(Segment, 'segments'),
             'via': ArrayField(Via, 'vias'),
             'zone': ArrayField(Zone, 'zones')
     }
-    nets = {}
-    classes = []
-    modules = []
-    circles = []
-    lines = []
-    texts = []
-    vias = []
-    zones = []
+    def __init__(self):
+        self.nets = {}
+        self.classes = []
+        self.modules = []
+        self.circles = []
+        self.arcs = []
+        self.lines = []
+        self.texts = []
+        self.vias = []
+        self.zones = []
+        self.segments = []
     def toS(self):
         return S('kicad_pcb', self.fieldsToS())
     def loadS(self, s):
