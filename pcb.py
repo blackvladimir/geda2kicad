@@ -124,11 +124,11 @@ class Element:
             elif c.name == "ElementLine":
                 self.lines.append(SymbolLine(c, True))
             elif c.name == "ElementArc":
-                self.lines.append(ElementArc(c))
+                self.arcs.append(ElementArc(c))
             elif c.name == "Pin":
-                self.lines.append(Pin(c))
+                self.pins.append(Pin(c))
             elif c.name == "Pad":
-                self.lines.append(Pad(c))
+                self.pads.append(Pad(c))
             else:
                 raise Exception("unknown item %s" % c.name)
     def itemize(self):
