@@ -46,12 +46,14 @@ def getLayerName(l): #TODO use groups and generate layer map?
         name = 'B'
     if name in {'top', 'top silk'}:
         name = 'F'
+
     if 'copper' in l.flags:
         name += '.Cu'
     elif 'outline' in l.flags:
         name = 'Edge.Cuts'
     else:
         name += '.SilkS'
+
     return name
 
 
@@ -137,10 +139,13 @@ def pcb2kicad(pcb):
     for n in pcb.netlist.nets:
         kicad.nets[i] = n.name #TODO net classes if they are used
         for c in n.connects:
-            m = partsdic[c.part]
-            for pad in m.pads:
-                if pad.name == c.pin:
-                    pad.net = (i, n.name)
+            try:
+                m = partsdic[c.part]
+                for pad in m.pads:
+                    if pad.name == c.pin:
+                        pad.net = (i, n.name)
+            except KeyError:
+                print('part %s not found: netlist connection not exported' % c.part)
         i += 1
 
 
