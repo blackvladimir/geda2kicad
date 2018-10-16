@@ -38,6 +38,10 @@ def kicadText(text, x,y, dir, scale, layer, typ = None):
 
 def getLayerName(l): #TODO use groups and generate layer map?
     name = l.name
+    if name == 'outline' and 'outline' not in l.flags:
+        print('layer named outline without outline type, assuming outline')
+        l.flags = {'outline'}
+
     if name in {'bottom', 'bottom silk'}:
         name = 'B'
     if name in {'top', 'top silk'}:
