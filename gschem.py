@@ -194,6 +194,3 @@ def save(path, items):
     lines = saveItems(items)
     with open(path,'w') as f:
         f.write('\n'.join(lines))
-
-itms = load('lock.sch')
-save('export.sch', itms)
