@@ -108,7 +108,7 @@ class Componnent:
             elif f[0] == 'U':
                 self.N = f[1]  #number of instance in package 
                 self.mm = f[2] #don't know what it is
-                self.ts = f[3]
+                self.ts = int('0x' + f[3])
             elif f[0] == 'P':
                 self.x = f[1]  #number of instance in package 
                 self.y = f[2] #don't know what it is
@@ -124,7 +124,7 @@ class Componnent:
     def save(self):
         r =  ['$Comp']
         r.append(saveFields('L', self.name, self.ref))
-        r.append(saveFields('U', self.N, self.mm, self.ts))
+        r.append(saveFields('U', self.N, self.mm, hex(self.ts)[2:]))
         r.append(saveFields('P', self.x, self.y))
         for i, f in enumerate(self.fields):
             r.append(f.save(i))
