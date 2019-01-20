@@ -1,6 +1,5 @@
-import gschem, eeschema
-from table import components
-import time
+import gschem, eeschema, table
+import time, sys
 orientConv = {
     (0, 0):   [1, 0,  0, -1],
     (90, 0):  [ 0, -1, -1, 0],
@@ -21,9 +20,15 @@ def text(kt, gt, v):
     if gt.visibility:
         kt.flags = '0000'
 
+if len(sys.argv) < 3:
+    print("usage\n%s gschem.sch kicad.sch" % sys.argv[0])
+    sys.exit(1)
+
 ts = int(time.time())
 
-gitems = gschem.load('lock.sch')
+components = table.load('symbols.csv')
+
+gitems = gschem.load(sys.argv[1])
 eitems = []
 
 ver = eeschema.Version()
@@ -67,12 +72,15 @@ for gi in gitems:
                     label.x, label.y = coor(a.x, a.y)
                     label.orientation = 0
                     label.size = 50
+                    if v.startswith('\_') and v.endswith('\_') and len(v) > 3:
+                        v = '~' + v[2:-2]
                     label.text = v
                     eitems.append(label)
 
     if isinstance(gi, gschem.Componnent):
         if gi.basename in components:
             name, xoff, yoff, aoff = components[gi.basename]
+            xoff, yoff, aoff = int(xoff), int(yoff), int(aoff)  #TODO do this when table is loaded
             if gi.mirror:
                 xoff = -xoff
             if gi.angle == 90:
@@ -114,4 +122,4 @@ for gi in gitems:
         else:
             print('Skipping', gi.basename)
 
-eeschema.save('kicadexp.sch', eitems)
+eeschema.save(sys.argv[2], eitems)
