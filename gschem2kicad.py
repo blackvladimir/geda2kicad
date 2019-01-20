@@ -110,6 +110,8 @@ for gi in gitems:
                         text(component.fields[0], a, v)
                     if k == 'value':
                         text(component.fields[1], a, v)
+                    if k == 'footprint':
+                        text(component.fields[2], a, v)
                         
             component.name = name
             component.N = 1
