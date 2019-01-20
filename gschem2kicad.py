@@ -15,6 +15,12 @@ orientConv = {
 def coor(x,y):
     return x // 2, -y // 2  #TODO configurable scale TODO move inside page 
 
+def text(kt, gt, v):
+    kt.text = v
+    kt.x, kt.y = coor(gt.x, gt.y)
+    if gt.visibility:
+        kt.flags = '0000'
+
 ts = int(time.time())
 
 gitems = gschem.load('lock.sch')
@@ -51,6 +57,18 @@ for gi in gitems:
         con = eeschema.Connection()
         con.x, con.y = coor(gi.x2, gi.y2)
         eitems.append(con)
+        if hasattr(gi, 'attributes'):
+            for a in gi.attributes:
+                k, v = a.text.split('=')
+                if k == 'netname':
+                    label = eeschema.Text()
+                    label.type = 'Label'
+                    label.shape = '~'
+                    label.x, label.y = coor(a.x, a.y)
+                    label.orientation = 0
+                    label.size = 50
+                    label.text = v
+                    eitems.append(label)
 
     if isinstance(gi, gschem.Componnent):
         if gi.basename in components:
@@ -72,7 +90,7 @@ for gi in gitems:
                 f.orientation = 'H'
                 f.x, f.y = coor(gi.x, gi.y)
                 f.size = 50
-                f.flags = '0000'
+                f.flags = '0001'    #hidden
                 f.just = 'C'
                 f.style = 'CNN'
                 component.fields.append(f)
@@ -81,9 +99,9 @@ for gi in gitems:
                     k, v = a.text.split('=')
                     if k == 'refdes':
                         component.ref = v
-                        component.fields[0].text = v
+                        text(component.fields[0], a, v)
                     if k == 'value':
-                        component.fields[1].text = v
+                        text(component.fields[1], a, v)
                         
             component.name = name
             component.N = 1
@@ -93,5 +111,7 @@ for gi in gitems:
             component.x, component.y = coor(gi.x  + xoff, gi.y + yoff)
             component.orientation = orientConv[((gi.angle + aoff) % 360, gi.mirror)]
             eitems.append(component)
+        else:
+            print('Skipping', gi.basename)
 
 eeschema.save('kicadexp.sch', eitems)

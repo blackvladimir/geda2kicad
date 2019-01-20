@@ -1,10 +1,4 @@
 import re
-WHITESPACE = re.compile("[ \r\t\n]*")
-NAME = re.compile("[^ \r\t\n)]+") 
-STRING = re.compile('"([^"]*)"')
-CHAR = re.compile("'(.)'")
-NUMBER = re.compile('(-?[\d.]+)(mil|mm)?')
-ITEMSSTART = re.compile('[ \r\t\n]*\(') #TODO delete unused
 
 def loadFields(s):
     fields = s.split(' ')
@@ -83,9 +77,9 @@ class Field:
     def parse(self, fields):
         self.text = fields[2]
         self.orientation = fields[3]
-        self.x = fields[4]
-        self.y = fields[5]
-        self.size = fields[6]
+        self.x = int(fields[4])
+        self.y = int(fields[5])
+        self.size = int(fields[6])
         self.flags = fields[7]
         self.just = fields[8]
         self.style = fields[9]
@@ -96,6 +90,18 @@ class Field:
             return saveFields('F', number, q(self.text), self.orientation, self.x, self.y, self.size, self.flags, self.just, self.style, q(self.name))
         else:
             return saveFields('F', number, q(self.text), self.orientation, self.x, self.y, self.size, self.flags, self.just, self.style)
+
+class Text:
+    def parse(self, attributes, lines):
+        self.type = attributes[1]
+        self.x = int(attributes[2])
+        self.y = int(attributes[3])
+        self.orientation = int(attributes[4])
+        self.size = int(attributes[5])
+        self.shape = attributes[6]
+        self.text = lines.pop(0)
+    def save(self):
+        return [saveFields('Text', self.type, self.x, self.y, self.orientation, self.size, self.shape), self.text]
 
 class Componnent:
     def parse(self, attributes, lines):
@@ -108,7 +114,7 @@ class Componnent:
             elif f[0] == 'U':
                 self.N = f[1]  #number of instance in package 
                 self.mm = f[2] #don't know what it is
-                self.ts = int('0x' + f[3])
+                self.ts = int(f[3], 16)
             elif f[0] == 'P':
                 self.x = f[1]  #number of instance in package 
                 self.y = f[2] #don't know what it is
@@ -174,10 +180,12 @@ def loadItems(lines, end = None):
             cl = Wire
         elif t == 'Connection':
             cl = Connection
+        elif t == 'Text':
+            cl = Text
         elif t == '$EndSCHEMATC':
             return items
         else:
-            raise(Exception('unknown type' + t))
+            raise(Exception('unknown type ' + t))
         i = cl()
         i.parse(attributes, lines)
         items.append(i)
