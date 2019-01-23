@@ -20,6 +20,17 @@ def text(kt, gt, v):
     if gt.visibility:
         kt.flags = '0000'
 
+def emtpyField(x,y):
+    f = eeschema.Field()
+    f.text = ''
+    f.orientation = 'H'
+    f.x, f.y = coor(x, y)
+    f.size = 50
+    f.flags = '0001'    #hidden
+    f.just = 'C'
+    f.style = 'CNN'
+    return f
+
 if len(sys.argv) < 3:
     print("usage\n%s gschem.sch kicad.sch" % sys.argv[0])
     sys.exit(1)
@@ -92,15 +103,8 @@ for gi in gitems:
             component = eeschema.Componnent()
             component.fields = []
             component.ref = 'X'
-            for i in range(3):  #defailt fields
-                f = eeschema.Field()
-                f.text = ''
-                f.orientation = 'H'
-                f.x, f.y = coor(gi.x, gi.y)
-                f.size = 50
-                f.flags = '0001'    #hidden
-                f.just = 'C'
-                f.style = 'CNN'
+            for i in range(4):  #default fields
+                f =emtpyField(gi.x, gi.y)
                 component.fields.append(f)
             if hasattr(gi, 'attributes'):
                 for a in gi.attributes:
@@ -112,6 +116,16 @@ for gi in gitems:
                         text(component.fields[1], a, v)
                     if k == 'footprint':
                         text(component.fields[2], a, v)
+                    if k == 'mpn':
+                        f = emtpyField(gi.x, gi.y)
+                        f.name = 'mpn'
+                        text(f, a, v)
+                        component.fields.append(f)
+                    if k == 'manufacturer':
+                        f = emtpyField(gi.x, gi.y)
+                        f.name = 'manufacturer'
+                        text(f, a, v)
+                        component.fields.append(f)
                         
             component.name = name
             component.N = 1
