@@ -68,6 +68,11 @@ class NumericValue:
             return v
         elif self.unit == 'mm':
             return round(self.value * 1e6)
+        elif self.unit is None: #older versions are using no units as 0.01mil
+            v = round(self.value * 0.0254 * 1e4)
+            if abs(round(v / 1e4) - v / 1e4) < 0.0254:    #it is in mils but should be in mm
+                v = round(v / 1e4) * 1e4
+            return v
         elif self.value == 0:
             return 0
         else:
