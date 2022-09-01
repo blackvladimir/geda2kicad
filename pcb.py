@@ -206,7 +206,10 @@ class Layer:
     def __init__(self, item):
         self.number = item.attributes[0].num()
         self.name = item.attributes[1].str()
-        self.flags = item.attributes[2].flags()
+        if len(item.attributes) > 2:
+            self.flags = item.attributes[2].flags()
+        else: #older version does not have flags and it is determined by name
+            self.flags = set()
 
         self.lines = []
         self.texts = []
