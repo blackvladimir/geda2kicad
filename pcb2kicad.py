@@ -42,11 +42,6 @@ def getLayerName(l): #TODO use groups and generate layer map?
         print('layer named outline without outline type, assuming outline')
         l.flags = {'outline'}
 
-    if name in {'bottom', 'bottom silk'}:
-        name = 'B'
-    if name in {'top', 'top silk'}:
-        name = 'F'
-
     if 'copper' in l.flags:
         name += '.Cu'
     elif 'outline' in l.flags:
@@ -69,6 +64,29 @@ def pcb2kicad(pcb):
     kicad.setup.via_min_drill = pcb.minDrill
     kicad.setup.via_min_size = pcb.minWidth + pcb.minRing
     #TODO mask settings?
+
+    innum = 1
+    for g in pcb.groups:
+        if 'c' in g:
+            name = 'F'
+        elif 's' in g:
+            name = 'B'
+        else:
+            name = 'In' + str(innum)
+            innum += 1
+        for l in pcb.layers:
+            if str(l.number) in g and l.name != 'outline': #layer named outline is presumed to be outline
+                l.name = name #layers in same group will have same name so they will be merged
+                l.flags.add('copper')
+
+    topsilk = False
+    for l in pcb.layers: #older versions have two layers named silk (first is bottom second is top/front)
+        if (l.name == 'silk' and topsilk) or l.name == 'top silk':
+            l.name = 'F'
+        elif l.name in ('silk', 'bottom silk'):
+            l.name = 'B'
+            topsilk = True
+        
 
     for s in pcb.styles:
         c = NetClass()
