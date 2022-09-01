@@ -333,6 +333,8 @@ class Pcb:
                 self.netlist = Netlist(item)
             elif item.name == "Rat":
                 self.rats.append(Rat(item))
+            elif item.name == "Cursor":
+                pass #cursor is not preserved right now
             else:
                 raise Exception("unknown item %s" % item.name)
 
